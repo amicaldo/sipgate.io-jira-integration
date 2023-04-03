@@ -1,5 +1,5 @@
 import xml from "xml";
-import api, { route, webTrigger } from "@forge/api";
+import api, { authorize, route, webTrigger } from "@forge/api";
 import ForgeUI, { render, AdminPage, Form, Fragment, Heading, Text, TextField, useState, Row } from "@forge/ui";
 
 const App = () => {
@@ -28,17 +28,43 @@ const App = () => {
 
 export async function SipgateCall(req) {
     // try {
-        console.log(req.body)
-        console.log(req.queryParameters)
+    console.log(req.body)
+    console.log(req.queryParameters)
 
-        const body = new URLSearchParams(req.body)
-        const queryParameters = req.queryParameters
-        var answerURL = await webTrigger.getUrl("sipgateAnswer")
-        var hangupURL = await webTrigger.getUrl("sipgateHangup")
+    const queryParameters = req.queryParameters
+    const project = await api.asApp().requestJira(route`/rest/api/3/project/${queryParameters.project[0]}`, { headers: { 'Accept': 'application/json' } })
+    const projectJSON = await project.json()
+    let canEdit;
 
-        console.log(body)
+    console.log(projectJSON)
 
-        const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
+    try {
+        console.log("Check Auth")
+
+        canEdit = await authorize().onJiraProject(projectJSON.id).canCreateIssues()
+
+        console.log("After Auth Check")
+    } catch (error) {
+        console.error (error)
+    }
+
+    console.log("After Auth")
+    console.log(canEdit)
+
+    var answerURL = await webTrigger.getUrl("sipgateAnswer")
+    var hangupURL = await webTrigger.getUrl("sipgateHangup")
+    var body = {}
+
+    req.body.split("&").forEach(function (part) {
+        var item = part.split("=")
+
+        body[item[0]] = decodeURIComponent(item[1])
+    });
+
+    if (canEdit) {
+        console.log("Can Edit")
+
+        const response = await api.asApp().requestJira(route`/rest/api/3/issue`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
@@ -48,13 +74,13 @@ export async function SipgateCall(req) {
                 fields: {
                     summary: `Call from ${body.from}`,
                     issuetype: {
-                        id: queryParameters.issueID
+                        id: queryParameters.issueID[0]
                     },
                     project: {
-                        key: queryParameters.projectID
+                        key: queryParameters.project[0]
                     },
-                    [`customfield_${queryParameters.handyField}`]: "0",
-                    [`customfield_${queryParameters.phoneField}`]: body.from
+                    [`customfield_${queryParameters.handyField[0]}`]: "0",
+                    [`customfield_${queryParameters.phoneField[0]}`]: body.from
                 }
             })
         })
@@ -70,6 +96,7 @@ export async function SipgateCall(req) {
             statusCode: 200,
             statusText: "OK"
         }
+    }
     // } catch (error) {
     //     return {
     //         body: error + "\n",
