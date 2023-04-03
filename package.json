@@ -1,0 +1,21 @@
+{
+  "name": "jira-sipgate-connector",
+  "version": "1.0.12",
+  "author": "amicaldo GmbH <admin@amicaldo.de>",
+  "main": "index.js",
+  "license": "GNU GENERAL PUBLIC LICENSE V3",
+  "private": true,
+  "scripts": {
+    "lint": "./node_modules/.bin/eslint src/**/* || npm run --silent hook-errors"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-plugin-react-hooks": "^4.2.0"
+  },
+  "dependencies": {
+    "@forge/api": "^2.14.0",
+    "@forge/ui": "1.8.1",
+    "dayjs": "^1.11.7",
+    "xml": "^1.0.1"
+  }
+}
