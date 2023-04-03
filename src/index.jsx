@@ -27,11 +27,16 @@ const App = () => {
 };
 
 export async function SipgateCall(req) {
-    try {
-        const body = JSON.parse(req.body)
-        const queryParameters = body.queryParameters
+    // try {
+        console.log(req.body)
+        console.log(req.queryParameters)
+
+        const body = new URLSearchParams(req.body)
+        const queryParameters = req.queryParameters
         var answerURL = await webTrigger.getUrl("sipgateAnswer")
         var hangupURL = await webTrigger.getUrl("sipgateHangup")
+
+        console.log(body)
 
         const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
             method: "POST",
@@ -39,17 +44,19 @@ export async function SipgateCall(req) {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
-            body: `{
-                summary: "Call from ${body.from}",
-                issuetype: {
-                    id: "${queryParameters.issueID}"
-                },
-                project: {
-                    key: "${queryParameters.projectID}"
-                },
-                customfield_${queryParameters.handyField}: "0",
-                customfield_${queryParameters.phoneField}: "${body.from}"
-            }`
+            body: JSON.stringify({
+                fields: {
+                    summary: `Call from ${body.from}`,
+                    issuetype: {
+                        id: queryParameters.issueID
+                    },
+                    project: {
+                        key: queryParameters.projectID
+                    },
+                    [`customfield_${queryParameters.handyField}`]: "0",
+                    [`customfield_${queryParameters.phoneField}`]: body.from
+                }
+            })
         })
 
         return {
@@ -63,14 +70,14 @@ export async function SipgateCall(req) {
             statusCode: 200,
             statusText: "OK"
         }
-    } catch (error) {
-        return {
-            body: error + "\n",
-            headers: { "Content-Type": ["application/json"] },
-            statusCode: 400,
-            statusText: "Bad Request",
-        }
-    }
+    // } catch (error) {
+    //     return {
+    //         body: error + "\n",
+    //         headers: { "Content-Type": ["application/json"] },
+    //         statusCode: 400,
+    //         statusText: "Bad Request",
+    //     }
+    // }
 }
 
 export async function SipgateAnswer(req) {
