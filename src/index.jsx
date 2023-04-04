@@ -51,10 +51,10 @@ function App() {
         let usersArr = []
         let cursor = ""
 
-        for (let i = 0; i <= dataLength; i++) {
+        for (let i = 0; i < dataLength; i++) {
             const storageDataPull = await storage.query().where("key", startsWith("sipgate_id_")).limit(20).cursor(cursor).getMany()
 
-            storageData = [...storageData, storageDataPull.results]
+            storageData.push(...storageDataPull.results)
             cursor = storageDataPull.nextCursor
         }
 
