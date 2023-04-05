@@ -16,15 +16,16 @@ function getBodyData(body) {
 }
 
 function App() {
+    const [issueConfig, setIssueConfig] = useState([])
     const [webTriggerURL, setWebTriggerURL] = useState("")
     const [users, setUsers] = useState([])
-    const [issueConfig, setIssueConfig] = useState([])
     const issueSubmit = formData => {
         storage.set("issueSummary", formData.issueSummary)
         storage.set("spamRatingField", formData.spamRatingField)
         storage.set("cityField", formData.cityField)
+        storage.set("closeID", formData.closeID)
 
-        setIssueConfig([formData.issueSummary, formData.spamRatingField, formData.cityField])
+        setIssueConfig([formData.issueSummary, formData.spamRatingField, formData.cityField, formData.closeID])
     }
     const generatorSubmit = async formData => {
         var url = await webTrigger.getUrl("sipgateCall")
@@ -59,6 +60,7 @@ function App() {
         const issueSummary = await storage.get("issueSummary")
         const spamRatingField = await storage.get("spamRatingField")
         const cityField = await storage.get("cityField")
+        const closeID = await storage.get("closeID")
         let storageData = []
         let usersArr = []
         let cursor = ""
@@ -91,7 +93,8 @@ function App() {
         setIssueConfig([
             issueSummary ? issueSummary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr",
             spamRatingField ? spamRatingField : " (Rate: {{$rating}})",
-            cityField ? cityField : " aus {{$city}}"
+            cityField ? cityField : " aus {{$city}}",
+            closeID ? closeID : ""
         ])
     }, [])
 
@@ -102,6 +105,7 @@ function App() {
                 <TextField name="issueSummary" type="text" isRequired defaultValue={issueConfig[0]} description="" />
                 <TextField name="spamRatingField" type="text" isRequired defaultValue={issueConfig[1]} />
                 <TextField name="cityField" type="text" isRequired defaultValue={issueConfig[2]} />
+                <TextField name="closeID" type="number" isRequired defaultValue={issueConfig[3]} />
             </Form>
             <Heading>Sipgate Webhook Generator</Heading>
             <Form onSubmit={generatorSubmit}>
@@ -175,7 +179,7 @@ export async function SipgateCall(req) {
         const issue = await issueRaw.json()
 
         return {
-            headers: { "Content-Type": ["application/json"] },
+            headers: { "Content-Type": ["application/xml"] },
             body: xml({
                 Response: [
                     { _attr: { onAnswer: `${answerURL}?issueID=${issue.id}` } },
@@ -199,7 +203,7 @@ export async function SipgateAnswer(req) {
     try {
         const body = getBodyData(req.body)
         const queryParameters = req.queryParameters
-        const accountId = await storage.get(`sipgate_id_${Array.isArray(body) ? body.user[0] : body.user}`)
+        const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
 
         if (accountId) {
             await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/assignee`, {
@@ -230,9 +234,39 @@ export async function SipgateAnswer(req) {
 }
 
 export async function SipgateHangup(req) {
-    const queryParameters = req.queryParameters
+    try {
+        const body = getBodyData(req.body)
 
-    const response = await api.asApp().requestJira(route`/rest`)
+        if (body.cause === "normalClearing") {
+            const queryParameters = req.queryParameters
+            const closeID = await storage.get("closeID")
+
+            await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/transitions`, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    transition: {"id": closeID}
+                })
+            });
+
+            return {
+                headers: { "Content-Type": ["application/json"] },
+                body: "",
+                statusCode: 200,
+                statusText: "OK"
+            }
+        }
+    } catch (error) {
+        return {
+            body: error + "\n",
+            headers: { "Content-Type": ["application/json"] },
+            statusCode: 400,
+            statusText: "Bad Request",
+        }
+    }
 }
 
 export const run = render(
