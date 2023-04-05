@@ -196,9 +196,37 @@ export async function SipgateCall(req) {
 }
 
 export async function SipgateAnswer(req) {
-    const queryParameters = req.queryParameters
+    try {
+        const body = getBodyData(req.body)
+        const queryParameters = req.queryParameters
+        const accountId = await storage.get(`sipgate_id_${Array.isArray(body) ? body.user[0] : body.user}`)
 
-    const response = await api.asApp().requestJira(route`/rest`)
+        if (accountId) {
+            await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/assignee`, {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    accountId
+                })
+            })
+        }
+        return {
+            headers: { "Content-Type": ["application/json"] },
+            body: "",
+            statusCode: 200,
+            statusText: "OK"
+        }
+    } catch (error) {
+        return {
+            body: error + "\n",
+            headers: { "Content-Type": ["application/json"] },
+            statusCode: 400,
+            statusText: "Bad Request",
+        }
+    }
 }
 
 export async function SipgateHangup(req) {
