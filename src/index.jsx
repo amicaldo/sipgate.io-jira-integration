@@ -1,5 +1,6 @@
 import xml from "xml"
 import dayjs from "dayjs"
+import fnTranslate from "md-to-adf"
 import api, { fetch, route, startsWith, storage, webTrigger } from "@forge/api"
 import ForgeUI, { render, AdminPage, Form, Fragment, Heading, Text, TextField, useState, useEffect, User } from "@forge/ui"
 
@@ -184,12 +185,13 @@ export async function SipgateCall(req) {
         const body = getBodyData(req.body)
 
         if (body.direction === "in") {
+            const answerURL = await webTrigger.getUrl("sipgateAnswer")
+            const hangupURL = await webTrigger.getUrl("sipgateHangup")
+
             console.log(body)
 
             if (!body.diversion) {
                 const queryParameters = req.queryParameters
-                const answerURL = await webTrigger.getUrl("sipgateAnswer")
-                const hangupURL = await webTrigger.getUrl("sipgateHangup")
                 const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
                 const issueSummary = await storage.get("issueSummary")
@@ -221,21 +223,7 @@ export async function SipgateCall(req) {
                                 key: queryParameters.project[0]
                             },
                             [`customfield_${queryParameters.phoneField[0]}`]: `+${body.from}`,
-                            description: {
-                                content: [
-                                    {
-                                        content: [
-                                            {
-                                                text: description,
-                                                type: "text"
-                                            }
-                                        ],
-                                        type: "paragraph"
-                                    }
-                                ],
-                                type: "doc",
-                                version: 1
-                            }
+                            description: fnTranslate(description)
                         }
                     })
                 })
@@ -244,43 +232,23 @@ export async function SipgateCall(req) {
                 await storage.set(body.xcid, { id: issue.id, description })
 
                 console.log(await storage.get(body.xcid))
-
-                return {
-                    headers: { "Content-Type": ["application/xml"] },
-                    body: xml({
-                        Response: [
-                            { _attr: { onAnswer: `${answerURL}?issueID=${issue.id}` } },
-                            { _attr: { onHangup: `${hangupURL}?issueID=${issue.id}` } }
-                        ]
-                    }),
-                    statusCode: 200,
-                    statusText: "OK"
-                }
             }
-            else {
-                const data = await storage.get(body.xcid)
 
-                if (data) {
-                    const answerURL = await webTrigger.getUrl("sipgateAnswer")
-                    const hangupURL = await webTrigger.getUrl("sipgateHangup")
-
-                    return {
-                        headers: { "Content-Type": ["application/xml"] },
-                        body: xml({
-                            Response: [
-                                { _attr: { onAnswer: `${answerURL}?issueID=${data.id}` } },
-                                { _attr: { onHangup: `${hangupURL}?issueID=${data.id}` } }
-                            ]
-                        }),
-                        statusCode: 200,
-                        statusText: "OK"
-                    }
-                }
+            return {
+                headers: { "Content-Type": ["application/xml"] },
+                body: xml({
+                    Response: [
+                        { _attr: { onAnswer: answerURL } },
+                        { _attr: { onHangup: hangupURL } }
+                    ]
+                }),
+                statusCode: 200,
+                statusText: "OK"
             }
         }
     } catch (error) {
         return {
-            body: error + "\n",
+            body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
             statusCode: 400,
             statusText: "Bad Request",
@@ -293,14 +261,13 @@ export async function SipgateAnswer(req) {
         const body = getBodyData(req.body)
 
         if (body.direction === "in") {
-            const queryParameters = req.queryParameters
             const data = await storage.get(body.xcid)
             const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
 
             console.log(body)
 
             if (data) {
-                const description = `${data.description}\nAnruf angenommen von **${body.user.replace("+", " ")}**`
+                const description = `${data.description}\n Anruf angenommen von **${body.user.replace("+", " ")}**`
 
                 await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
@@ -309,40 +276,24 @@ export async function SipgateAnswer(req) {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        fields: {
-                            description: {
-                                content: [
-                                    {
-                                        content: [
-                                            {
-                                                text: description,
-                                                type: "text"
-                                            }
-                                        ],
-                                        type: "paragraph"
-                                    }
-                                ],
-                                type: "doc",
-                                version: 1
-                            }
-                        }
+                        fields: { description: fnTranslate(description) }
                     })
                 })
 
                 await storage.set(body.xcid, { ...data, description, date: dayjs().add(2, "hour").toJSON() })
-            }
 
-            if (accountId) {
-                await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/assignee`, {
-                    method: "PUT",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        accountId
+                if (accountId) {
+                    await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
+                        method: "PUT",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            accountId
+                        })
                     })
-                })
+                }
             }
 
             return {
@@ -354,7 +305,7 @@ export async function SipgateAnswer(req) {
         }
     } catch (error) {
         return {
-            body: error + "\n",
+            body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
             statusCode: 400,
             statusText: "Bad Request",
@@ -368,7 +319,6 @@ export async function SipgateHangup(req) {
 
         if (body.direction === "in") {
             const cause = body.cause
-            const queryParameters = req.queryParameters
             const data = await storage.get(body.xcid)
             let description
 
@@ -381,36 +331,36 @@ export async function SipgateHangup(req) {
                     const dateData = dayjs().add(2, "hour")
                     const callDuration = dateData.diff(dayjs(data.date), "m")
 
-                    description = `${data.description}\nAnruf aufgelegt um: **${dateData.format("HH:mm")}**\nAnrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Stunden.`
-                }
+                    description = `${data.description}\n Anruf aufgelegt um: **${dateData.format("HH:mm")}**\n Anrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Stunden.`
 
-                if (closeID) {
-                    await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/transitions`, {
-                        method: "POST",
-                        headers: {
-                            "Accept": "application/json",
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            transition: { "id": closeID }
+                    if (closeID) {
+                        await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
+                            method: "POST",
+                            headers: {
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                transition: { "id": closeID }
+                            })
                         })
-                    });
+                    }
                 }
             }
             else if (cause === "busy") {
-                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person beschäftigt war.`
+                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person beschäftigt war.`
             }
             else if (cause === "cancel") {
-                description = `${data.description}\nDer Anruf wurde beendet bevor eine Person ran gehen konnte.`
+                description = `${data.description}\n Der Anruf wurde beendet bevor eine Person ran gehen konnte.`
             }
             else if (cause === "noAnswer") {
-                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
+                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
             }
             else if (cause === "congestion") {
-                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
+                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
             }
             else if (cause === "notFound") {
-                description = `${data.description}\nDer Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
+                description = `${data.description}\n Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
             }
 
             if (description) {
@@ -421,23 +371,7 @@ export async function SipgateHangup(req) {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        fields: {
-                            description: {
-                                content: [
-                                    {
-                                        content: [
-                                            {
-                                                text: description,
-                                                type: "text"
-                                            }
-                                        ],
-                                        type: "paragraph"
-                                    }
-                                ],
-                                type: "doc",
-                                version: 1
-                            }
-                        }
+                        fields: { description: fnTranslate(description) }
                     })
                 })
             }
@@ -453,33 +387,10 @@ export async function SipgateHangup(req) {
         }
     } catch (error) {
         return {
-            body: error + "\n",
+            body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
             statusCode: 400,
             statusText: "Bad Request",
-        }
-    }
-}
-
-export async function SipgateGather(req) {
-    const body = getBodyData(req.body)
-
-    console.log(body)
-
-    if (body.event === "newCall") {
-        const onAnswer = await webTrigger.getUrl("sipgateAnswer")
-        const onHangup = await webTrigger.getUrl("sipgateHangup")
-
-        return {
-            headers: { "Content-Type": ["application/xml"] },
-            body: xml({
-                Response: [
-                    { _attr: { onAnswer } },
-                    { _attr: { onHangup } }
-                ]
-            }),
-            statusCode: 200,
-            statusText: "OK"
         }
     }
 }
