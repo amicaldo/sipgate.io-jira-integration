@@ -3,6 +3,10 @@ import dayjs from "dayjs"
 import api, { fetch, route, startsWith, storage, webTrigger } from "@forge/api"
 import ForgeUI, { render, AdminPage, Form, Fragment, Heading, Text, TextField, useState, useEffect, User } from "@forge/ui"
 
+function cutNumber(number) {
+    return `${number}`.replace("49231449955", "")
+}
+
 function getBodyData(body) {
     let obj = {}
 
@@ -19,22 +23,22 @@ function App() {
     const [issueConfig, setIssueConfig] = useState([])
     const [webTriggerURL, setWebTriggerURL] = useState("")
     const [users, setUsers] = useState([])
-    const issueSubmit = formData => {
-        storage.set("issueSummary", formData.issueSummary)
-        storage.set("spamRatingField", formData.spamRatingField)
-        storage.set("cityField", formData.cityField)
-        storage.set("closeID", formData.closeID)
+    const issueSubmit = async formData => {
+        await storage.set("issueSummary", formData.issueSummary)
+        await storage.set("spamRatingField", formData.spamRatingField)
+        await storage.set("cityField", formData.cityField)
+        await storage.set("closeID", formData.closeID)
 
         setIssueConfig([formData.issueSummary, formData.spamRatingField, formData.cityField, formData.closeID])
     }
     const generatorSubmit = async formData => {
         var url = await webTrigger.getUrl("sipgateCall")
 
-        url += `?project=${formData.projectID}&handyField=${formData.cField1}&phoneField=${formData.cField2}&issueID=${formData.issueID}`
+        url += `?project=${formData.projectID}&phoneField=${formData.cField1}&issueID=${formData.issueID}`
 
         setWebTriggerURL(url)
     }
-    const userSubmit = formData => {
+    const userSubmit = async formData => {
         let usersCopy = [...users]
 
         for (const [atlassianID, sipgateID] of Object.entries(formData)) {
@@ -44,7 +48,7 @@ function App() {
                 if (dataIndex !== -1) {
                     usersCopy[dataIndex] = { ...usersCopy[dataIndex], sipgateID }
 
-                    storage.set(`sipgate_id_${sipgateID}`, atlassianID)
+                    await storage.set(`sipgate_id_${sipgateID}`, atlassianID)
                 }
             }
         }
@@ -109,9 +113,8 @@ function App() {
             </Form>
             <Heading>Sipgate Webhook Generator</Heading>
             <Form onSubmit={generatorSubmit}>
-                <TextField name="projectID" isRequired type="text" description="ID of the project" />
-                <TextField name="cField1" isRequired type="number" description="ID of the first Custom Field" />
-                <TextField name="cField2" isRequired type="number" description="ID of the second Custom Field" />
+                <TextField name="projectID" isRequired type="text" description="ID of the Project" />
+                <TextField name="cField1" isRequired type="number" description="ID of the TelefonField" />
                 <TextField name="issueID" isRequired type="number" description="ID of the issueType" />
             </Form>
             {webTriggerURL && (
@@ -141,53 +144,101 @@ function App() {
 export async function SipgateCall(req) {
     try {
         const body = getBodyData(req.body)
-        const queryParameters = req.queryParameters
-        const answerURL = await webTrigger.getUrl("sipgateAnswer")
-        const hangupURL = await webTrigger.getUrl("sipgateHangup")
-        const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/${body.from}?json=1`)
-        const tellows = await tellowsRaw.json()
-        const issueSummary = await storage.get("issueSummary")
-        const spamRatingField = await storage.get("spamRatingField")
-        const cityField = await storage.get("cityField")
-        let summary = `${issueSummary}`
-            .replace("{{$numberOrName}}", `+${body.from}`)
-            .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${spamRatingField}`.replace("{{$rating}}", tellows.tellows.score) : "")
-            .replace("{{$cityField}}", tellows?.tellows?.location ? `${cityField}`.replace("{{$city}}", tellows.tellows.location) : "")
-            .replace("{{$date}}", dayjs().add(2, "hour").format("DD.MM.YY"))
-            .replace("{{$time}}", dayjs().add(2, "hour").format("HH:mm"))
 
-        const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                fields: {
-                    summary,
-                    issuetype: {
-                        id: queryParameters.issueID[0]
+        if (body.direction === "in") {
+            console.log(body)
+
+            if (!body.diversion) {
+                const queryParameters = req.queryParameters
+                const answerURL = await webTrigger.getUrl("sipgateAnswer")
+                const hangupURL = await webTrigger.getUrl("sipgateHangup")
+                const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/${body.from}?json=1`)
+                const tellows = await tellowsRaw.json()
+                const issueSummary = await storage.get("issueSummary")
+                const spamRatingField = await storage.get("spamRatingField")
+                const cityField = await storage.get("cityField")
+                const dateData = dayjs().add(2, "hour")
+                const time = dateData.format("HH:mm")
+                const description = `Eingehender Anruf um **${time} Uhr** auf - **${cutNumber(body.to)}**`
+                let summary = `${issueSummary}`
+                    .replace("{{$numberOrName}}", `+${body.from}`)
+                    .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${spamRatingField}`.replace("{{$rating}}", tellows.tellows.score) : "")
+                    .replace("{{$cityField}}", tellows?.tellows?.location ? `${cityField}`.replace("{{$city}}", tellows.tellows.location) : "")
+                    .replace("{{$date}}", dateData.format("DD.MM.YY"))
+                    .replace("{{$time}}", time)
+
+                const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
                     },
-                    project: {
-                        key: queryParameters.project[0]
-                    },
-                    [`customfield_${queryParameters.handyField[0]}`]: "",
-                    [`customfield_${queryParameters.phoneField[0]}`]: body.from
+                    body: JSON.stringify({
+                        fields: {
+                            summary,
+                            issuetype: {
+                                id: queryParameters.issueID[0]
+                            },
+                            project: {
+                                key: queryParameters.project[0]
+                            },
+                            [`customfield_${queryParameters.phoneField[0]}`]: `+${body.from}`,
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
+                        }
+                    })
+                })
+                const issue = await issueRaw.json()
+
+                await storage.set(body.xcid, { id: issue.id, description })
+
+                console.log(await storage.get(body.xcid))
+
+                return {
+                    headers: { "Content-Type": ["application/xml"] },
+                    body: xml({
+                        Response: [
+                            { _attr: { onAnswer: `${answerURL}?issueID=${issue.id}` } },
+                            { _attr: { onHangup: `${hangupURL}?issueID=${issue.id}` } }
+                        ]
+                    }),
+                    statusCode: 200,
+                    statusText: "OK"
                 }
-            })
-        })
-        const issue = await issueRaw.json()
+            }
+            else {
+                const data = await storage.get(body.xcid)
 
-        return {
-            headers: { "Content-Type": ["application/xml"] },
-            body: xml({
-                Response: [
-                    { _attr: { onAnswer: `${answerURL}?issueID=${issue.id}` } },
-                    { _attr: { onHangup: `${hangupURL}?issueID=${issue.id}` } }
-                ]
-            }),
-            statusCode: 200,
-            statusText: "OK"
+                if (data) {
+                    const answerURL = await webTrigger.getUrl("sipgateAnswer")
+                    const hangupURL = await webTrigger.getUrl("sipgateHangup")
+
+                    return {
+                        headers: { "Content-Type": ["application/xml"] },
+                        body: xml({
+                            Response: [
+                                { _attr: { onAnswer: `${answerURL}?issueID=${data.id}` } },
+                                { _attr: { onHangup: `${hangupURL}?issueID=${data.id}` } }
+                            ]
+                        }),
+                        statusCode: 200,
+                        statusText: "OK"
+                    }
+                }
+            }
         }
     } catch (error) {
         return {
@@ -202,26 +253,66 @@ export async function SipgateCall(req) {
 export async function SipgateAnswer(req) {
     try {
         const body = getBodyData(req.body)
-        const queryParameters = req.queryParameters
-        const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
 
-        if (accountId) {
-            await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/assignee`, {
-                method: "PUT",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    accountId
+        if (body.direction === "in") {
+            const queryParameters = req.queryParameters
+            const data = await storage.get(body.xcid)
+            const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
+
+            console.log(body)
+
+            if (data) {
+                const description = `${data.description}\nAnruf angenommen von **${body.user.replace("+", " ")}**`
+
+                await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        fields: {
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
+                        }
+                    })
                 })
-            })
-        }
-        return {
-            headers: { "Content-Type": ["application/json"] },
-            body: "",
-            statusCode: 200,
-            statusText: "OK"
+
+                await storage.set(body.xcid, { ...data, description, date: dayjs().add(2, "hour").toJSON() })
+            }
+
+            if (accountId) {
+                await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/assignee`, {
+                    method: "PUT",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        accountId
+                    })
+                })
+            }
+
+            return {
+                headers: { "Content-Type": ["application/json"] },
+                body: "",
+                statusCode: 200,
+                statusText: "OK"
+            }
         }
     } catch (error) {
         return {
@@ -237,20 +328,83 @@ export async function SipgateHangup(req) {
     try {
         const body = getBodyData(req.body)
 
-        if (body.cause === "normalClearing") {
+        if (body.direction === "in") {
+            const cause = body.cause
             const queryParameters = req.queryParameters
-            const closeID = await storage.get("closeID")
+            const data = await storage.get(body.xcid)
+            let description
 
-            await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/transitions`, {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    transition: {"id": closeID}
+            console.log(body)
+
+            if (cause === "normalClearing") {
+                const closeID = await storage.get("closeID")
+
+                if (data) {
+                    const dateData = dayjs().add(2, "hour")
+                    const callDuration = dateData.diff(dayjs(data.date), "m")
+
+                    description = `${data.description}\nAnruf aufgelegt um: **${dateData.format("HH:mm")}**\nAnrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Stunden.`
+                }
+
+                if (closeID) {
+                    await api.asApp().requestJira(route`/rest/api/3/issue/${queryParameters.issueID}/transitions`, {
+                        method: "POST",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            transition: { "id": closeID }
+                        })
+                    });
+                }
+            }
+            else if (cause === "busy") {
+                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person beschäftigt war.`
+            }
+            else if (cause === "cancel") {
+                description = `${data.description}\nDer Anruf wurde beendet bevor eine Person ran gehen konnte.`
+            }
+            else if (cause === "noAnswer") {
+                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
+            }
+            else if (cause === "congestion") {
+                description = `${data.description}\nDer Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
+            }
+            else if (cause === "notFound") {
+                description = `${data.description}\nDer Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
+            }
+
+            if (description) {
+                await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        fields: {
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
+                        }
+                    })
                 })
-            });
+            }
+
+            await storage.delete(body.xcid)
 
             return {
                 headers: { "Content-Type": ["application/json"] },
@@ -265,6 +419,29 @@ export async function SipgateHangup(req) {
             headers: { "Content-Type": ["application/json"] },
             statusCode: 400,
             statusText: "Bad Request",
+        }
+    }
+}
+
+export async function SipgateGather(req) {
+    const body = getBodyData(req.body)
+
+    console.log(body)
+
+    if (body.event === "newCall") {
+        const onAnswer = await webTrigger.getUrl("sipgateAnswer")
+        const onHangup = await webTrigger.getUrl("sipgateHangup")
+
+        return {
+            headers: { "Content-Type": ["application/xml"] },
+            body: xml({
+                Response: [
+                    { _attr: { onAnswer } },
+                    { _attr: { onHangup } }
+                ]
+            }),
+            statusCode: 200,
+            statusText: "OK"
         }
     }
 }
