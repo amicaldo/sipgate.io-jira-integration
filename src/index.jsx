@@ -106,22 +106,22 @@ function App() {
     return (
         <Fragment>
             <Heading>Issue Configuration</Heading>
-            Welcome to the configuration UI for your Sipgate <--> JIRA integration!
+            Welcome to the configuration UI for your Sipgate + JIRA integration!
             We will create one ticket for each incomming call. Here, you can customize the format of each ticket created for incoming calls.
 
             <Form onSubmit={issueSubmit}>
                 <Text>
-                    <strong>issueSummary</strong>: This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.
+                    <strong>issueSummary</strong>: This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von &lbrace;&lbrace;$numberOrName&rbrace;&rbrace; &lbrace;&lbrace;$spamRatingField&rbrace;&rbrace; &lbrace;&lbrace;$cityField&rbrace;&rbrace;  - &lbrace;&lbrace;$date&rbrace;&rbrace; - &lbrace;&lbrace;$time&rbrace;&rbrace; Uhr", where &lbrace;&lbrace;$numberOrName&rbrace;&rbrace; represents the caller's number or name, &lbrace;&lbrace;$spamRatingField&rbrace;&rbrace; represents the spam rating, &lbrace;&lbrace;$cityField&rbrace;&rbrace; represents the caller's city, and &lbrace;&lbrace;$date&rbrace;&rbrace; and &lbrace;&lbrace;$time&rbrace;&rbrace; represent the date and time of the call.
                 </Text>
                 <TextField name="issueSummary" type="text" isRequired defaultValue={issueConfig[0]} description="" />
 
                 <Text>
-                    <strong>spamRating</strong>: This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: {{$rating}})", where {{$rating}} represents the spam rating.
+                    <strong>spamRating</strong>: This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: &lbrace;&lbrace;$rating&rbrace;&rbrace;)", where &lbrace;&lbrace;$rating&rbrace;&rbrace; represents the spam rating.
                 </Text>
                 <TextField name="spamRatingField" type="text" isRequired defaultValue={issueConfig[1]} />
 
                 <Text>
-                    <strong>cityField</strong>: This field specifies the caller's city for the ticket. If left blank, it will default to " aus {{$city}}", where {{$city}} represents the caller's city.
+                    <strong>cityField</strong>: This field specifies the caller's city for the ticket. If left blank, it will default to " aus &lbrace;&lbrace;$city&rbrace;&rbrace;", where &lbrace;&lbrace;$city&rbrace;&rbrace; represents the caller's city.
                 </Text>
                 <TextField name="cityField" type="text" isRequired defaultValue={issueConfig[2]} />
 
