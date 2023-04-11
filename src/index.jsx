@@ -1,6 +1,5 @@
 import xml from "xml"
 import dayjs from "dayjs"
-import fnTranslate from "md-to-adf"
 import api, { fetch, route, startsWith, storage, webTrigger } from "@forge/api"
 import ForgeUI, { render, AdminPage, Form, Fragment, Heading, Text, TextField, useState, useEffect, User } from "@forge/ui"
 
@@ -106,8 +105,10 @@ function App() {
     return (
         <Fragment>
             <Heading>Issue Configuration</Heading>
-            Welcome to the configuration UI for your Sipgate + JIRA integration!
-            We will create one ticket for each incomming call. Here, you can customize the format of each ticket created for incoming calls.
+            <Text>
+                Welcome to the configuration UI for your Sipgate + JIRA integration!
+                We will create one ticket for each incomming call. Here, you can customize the format of each ticket created for incoming calls.
+            </Text>
 
             <Form onSubmit={issueSubmit}>
                 <Text>
@@ -173,7 +174,6 @@ function App() {
                             </Fragment>
                         ))}
                     </Form>
-                    <Text>{JSON.stringify(users, null, 4)}</Text>
                 </Fragment>
             )}
         </Fragment>
@@ -187,19 +187,19 @@ export async function SipgateCall(req) {
         if (body.direction === "in") {
             const answerURL = await webTrigger.getUrl("sipgateAnswer")
             const hangupURL = await webTrigger.getUrl("sipgateHangup")
+            const dateData = dayjs().add(2, "hour")
+            const time = dateData.format("HH:mm:ss")
 
             console.log(body)
 
             if (!body.diversion) {
                 const queryParameters = req.queryParameters
-                const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/${body.from}?json=1`)
+                const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
                 const issueSummary = await storage.get("issueSummary")
                 const spamRatingField = await storage.get("spamRatingField")
                 const cityField = await storage.get("cityField")
-                const dateData = dayjs().add(2, "hour")
-                const time = dateData.format("HH:mm")
-                const description = `Eingehender Anruf um **${time} Uhr** auf - **${cutNumber(body.to)}**`
+                const description = `${time} Uhr: Eingehender Anruf auf - ${cutNumber(body.to)}.`
                 let summary = `${issueSummary}`
                     .replace("{{$numberOrName}}", `+${body.from}`)
                     .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${spamRatingField}`.replace("{{$rating}}", tellows.tellows.score) : "")
@@ -223,15 +223,63 @@ export async function SipgateCall(req) {
                                 key: queryParameters.project[0]
                             },
                             [`customfield_${queryParameters.phoneField[0]}`]: `+${body.from}`,
-                            description: fnTranslate(description)
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
                         }
                     })
                 })
                 const issue = await issueRaw.json()
 
                 await storage.set(body.xcid, { id: issue.id, description })
+            }
+            else {
+                const data = await storage.get(body.xcid)
 
-                console.log(await storage.get(body.xcid))
+                if (data) {
+                    const description = `${data.description}\n${time} Uhr: Anruf weitergeleitet zu ${body.user.replace("+", "")}.`
+
+                    await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                        method: "PUT",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            fields: {
+                                description: {
+                                    content: [
+                                        {
+                                            content: [
+                                                {
+                                                    text: description,
+                                                    type: "text"
+                                                }
+                                            ],
+                                            type: "paragraph"
+                                        }
+                                    ],
+                                    type: "doc",
+                                    version: 1
+                                }
+                            }
+                        })
+                    })
+
+                    await storage.set(body.xcid, { ...data, description })
+                }
             }
 
             return {
@@ -262,12 +310,13 @@ export async function SipgateAnswer(req) {
 
         if (body.direction === "in") {
             const data = await storage.get(body.xcid)
+            const dateData = dayjs().add(2, "hour")
             const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
 
             console.log(body)
 
             if (data) {
-                const description = `${data.description}\n Anruf angenommen von **${body.user.replace("+", " ")}**`
+                const description = `${data.description}\n${dateData.format("HH:mm:ss")} Uhr: Anruf angenommen von ${body.user.replace("+", " ")}.`
 
                 await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
@@ -276,11 +325,27 @@ export async function SipgateAnswer(req) {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        fields: { description: fnTranslate(description) }
+                        fields: {
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
+                        }
                     })
                 })
 
-                await storage.set(body.xcid, { ...data, description, date: dayjs().add(2, "hour").toJSON() })
+                await storage.set(body.xcid, { ...data, description, date: dateData.toJSON() })
 
                 if (accountId) {
                     await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
@@ -320,6 +385,8 @@ export async function SipgateHangup(req) {
         if (body.direction === "in") {
             const cause = body.cause
             const data = await storage.get(body.xcid)
+            const dateData = dayjs().add(2, "hour")
+            const time = `\n${dateData.format("HH:mm:ss")} Uhr: `
             let description
 
             console.log(body)
@@ -328,12 +395,11 @@ export async function SipgateHangup(req) {
                 const closeID = await storage.get("closeID")
 
                 if (data) {
-                    const dateData = dayjs().add(2, "hour")
-                    const callDuration = dateData.diff(dayjs(data.date), "m")
+                    const callDuration = dateData.diff(dayjs(data.date), "s")
 
-                    description = `${data.description}\n Anruf aufgelegt um: **${dateData.format("HH:mm")}**\n Anrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Stunden.`
+                    description = `${data.description}${time}Anruf aufgelegt.\n\nAnrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Minuten.`
 
-                    if (closeID) {
+                    if (closeID && !body.diversion) {
                         await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
                             method: "POST",
                             headers: {
@@ -348,19 +414,19 @@ export async function SipgateHangup(req) {
                 }
             }
             else if (cause === "busy") {
-                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person beschäftigt war.`
+                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person beschäftigt war.`
             }
             else if (cause === "cancel") {
-                description = `${data.description}\n Der Anruf wurde beendet bevor eine Person ran gehen konnte.`
+                description = `${data.description}${time}Der Anruf wurde beendet bevor eine Person ran gehen konnte.`
             }
             else if (cause === "noAnswer") {
-                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
+                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
             }
             else if (cause === "congestion") {
-                description = `${data.description}\n Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
+                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
             }
             else if (cause === "notFound") {
-                description = `${data.description}\n Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
+                description = `${data.description}${time}Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
             }
 
             if (description) {
@@ -371,12 +437,32 @@ export async function SipgateHangup(req) {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        fields: { description: fnTranslate(description) }
+                        fields: {
+                            description: {
+                                content: [
+                                    {
+                                        content: [
+                                            {
+                                                text: description,
+                                                type: "text"
+                                            }
+                                        ],
+                                        type: "paragraph"
+                                    }
+                                ],
+                                type: "doc",
+                                version: 1
+                            }
+                        }
                     })
                 })
             }
 
-            await storage.delete(body.xcid)
+            if (!body.diversion) {
+                console.log("DELETE")
+
+                await storage.delete(body.xcid)
+            }
 
             return {
                 headers: { "Content-Type": ["application/json"] },
