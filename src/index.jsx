@@ -105,18 +105,51 @@ function App() {
     return (
         <Fragment>
             <Heading>Issue Configuration</Heading>
+            Welcome to the configuration UI for your Sipgate <--> JIRA integration!
+            We will create one ticket for each incomming call. Here, you can customize the format of each ticket created for incoming calls.
+
             <Form onSubmit={issueSubmit}>
+                <Text>
+                    <strong>issueSummary</strong>: This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.
+                </Text>
                 <TextField name="issueSummary" type="text" isRequired defaultValue={issueConfig[0]} description="" />
+
+                <Text>
+                    <strong>spamRating</strong>: This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: {{$rating}})", where {{$rating}} represents the spam rating.
+                </Text>
                 <TextField name="spamRatingField" type="text" isRequired defaultValue={issueConfig[1]} />
+
+                <Text>
+                    <strong>cityField</strong>: This field specifies the caller's city for the ticket. If left blank, it will default to " aus {{$city}}", where {{$city}} represents the caller's city.
+                </Text>
                 <TextField name="cityField" type="text" isRequired defaultValue={issueConfig[2]} />
+
+                <Text>
+                    <strong>closeID</strong>: This field specifies the workflow trigger to execute onHangup
+                </Text>
                 <TextField name="closeID" type="number" isRequired defaultValue={issueConfig[3]} />
             </Form>
             <Heading>Sipgate Webhook Generator</Heading>
+            <Text>
+                Welcome to the Sipgate webhook generator! This tool allows you to configure webhooks for each user and line in your Sipgate account, which can be used to create tickets in your chosen project when a call comes in.
+
+                Before you can use this tool, you'll need to purchase the sipgate.io product from Sipgate. Once you've done that, you can configure a webhook for each user and line individually.
+
+                Once you've filled out the form, click the submit button to generate your webhook link. You can then copy and paste this link into your Sipgate account settings to activate the webhook.
+
+                Please note that you can configure different projects for different incoming queues in your Sipgate account. Additionally, you can set different issue types for different lines or users, which can be useful if you want to create different types of tickets depending on who is receiving the call.
+
+                To generate a webhook link, please fill out the form below. No data is stored its just the helper to create an link:
+            </Text>
             <Form onSubmit={generatorSubmit}>
+                <Text>projectID: This is the ID of the project that you want to create tickets in when a call comes in. This field is required.</Text>
                 <TextField name="projectID" isRequired type="text" description="ID of the Project" />
+                <Text>cField1: This is the ID of the field where you want to store the telephone number of the incoming call. This field is required and must be a number.</Text>
                 <TextField name="cField1" isRequired type="number" description="ID of the TelefonField" />
+                <Text>issueID: This is the ID of the issue type that you want to create for the incoming call. This field is required and must be a number.</Text>
                 <TextField name="issueID" isRequired type="number" description="ID of the issueType" />
             </Form>
+
             {webTriggerURL && (
                 <Fragment>
                     <Heading>Webhook URL for Sipgate</Heading>
@@ -126,6 +159,11 @@ function App() {
             {users.length > 0 && (
                 <Fragment>
                     <Heading>User Configuration</Heading>
+                    <Text>
+                        If any user pickup an sipgate call we assign him the created ticket. To link the Sipgate user to their corresponding Jira user, please enter the Sipgate user ID here.
+                        You can find this ID in the URL when editing a user in the Sipgate control panel. In this example, the required user ID is "w9":
+                        https://app.sipgate.com/w0/users/<strong>https://app.sipgate.com/w0/users/w9/routing</strong>/routing
+                    </Text>
                     <Form onSubmit={userSubmit}>
                         {users.map(user => (
                             <Fragment>
