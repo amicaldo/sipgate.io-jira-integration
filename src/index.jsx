@@ -247,9 +247,10 @@ export async function SipgateCall(req) {
             }
             else {
                 const data = await storage.get(body.xcid)
+                const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
                 if (data) {
-                    const description = `${data.description}\n${time} Uhr: Anruf weitergeleitet zu ${body.user.replace("+", "")}.`
+                    const description = `${data.description}\n${time} Uhr: Anruf weitergeleitet zu ${user.replace("+", " ")}.`
 
                     await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                         method: "PUT",
@@ -311,12 +312,14 @@ export async function SipgateAnswer(req) {
         if (body.direction === "in") {
             const data = await storage.get(body.xcid)
             const dateData = dayjs().add(2, "hour")
-            const accountId = await storage.get(`sipgate_id_${Array.isArray(body.userId) ? body.userId[0] : body.userId}`)
+            const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
+            const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
+            const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
             console.log(body)
 
             if (data) {
-                const description = `${data.description}\n${dateData.format("HH:mm:ss")} Uhr: Anruf angenommen von ${body.user.replace("+", " ")}.`
+                const description = `${data.description}\n${dateData.format("HH:mm:ss")} Uhr: Anruf angenommen von ${user.replace("+", " ")}.`
 
                 await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
