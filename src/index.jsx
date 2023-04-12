@@ -3,10 +3,6 @@ import dayjs from "dayjs"
 import api, { fetch, route, startsWith, storage, webTrigger } from "@forge/api"
 import ForgeUI, { render, AdminPage, useState, useEffect, Cell, Fragment, Form, Head, Heading, Row, SectionMessage, Strong, Table, Tab, Tabs, Text, TextField, User } from "@forge/ui"
 
-function cutNumber(number) {
-    return `${number}`.replace("49231449955", "")
-}
-
 function getBodyData(body) {
     let obj = {}
 
@@ -23,18 +19,15 @@ function App() {
     const [issueConfig, setIssueConfig] = useState([])
     const [webTriggerURL, setWebTriggerURL] = useState("")
     const [users, setUsers] = useState([])
-    const issueSubmit = async formData => {
-        await storage.set("issueSummary", formData.issueSummary)
-        await storage.set("spamRatingField", formData.spamRatingField)
-        await storage.set("cityField", formData.cityField)
-        await storage.set("closeID", formData.closeID)
+    const issueSubmit = async ({ issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound }) => {
+        await storage.set("issueConfiguration", { issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound })
 
-        setIssueConfig([formData.issueSummary, formData.spamRatingField, formData.cityField, formData.closeID])
+        setIssueConfig([issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound])
     }
     const generatorSubmit = async formData => {
         var url = await webTrigger.getUrl("sipgateCall")
 
-        url += `?project=${formData.projectID}&phoneField=${formData.cField1}&issueID=${formData.issueID}`
+        url += `?project=${formData.projectID}&phoneField=${formData.cField1}&issueID=${formData.issueID}&closeID=${formData.closeID}`
 
         setWebTriggerURL(url)
     }
@@ -61,10 +54,7 @@ function App() {
         const usersData = await usersRaw.json()
         const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.displayName !== "Former user")
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
-        const issueSummary = await storage.get("issueSummary")
-        const spamRatingField = await storage.get("spamRatingField")
-        const cityField = await storage.get("cityField")
-        const closeID = await storage.get("closeID")
+        let issueConfiguration = await storage.get("issueSummary")
         let storageData = []
         let usersArr = []
         let cursor = ""
@@ -95,10 +85,19 @@ function App() {
 
         setUsers(usersArr)
         setIssueConfig([
-            issueSummary ? issueSummary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr",
-            spamRatingField ? spamRatingField : " (Rate: {{$rating}})",
-            cityField ? cityField : " aus {{$city}}",
-            closeID ? closeID : ""
+            issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr",
+            issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : " (Rate: {{$rating}})",
+            issueConfiguration?.cityField ? issueConfiguration.cityField : " aus {{$city}}",
+            issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : "{{$time}} Uhr: Eingehender Anruf auf - {{$sipgateNumber}}",
+            issueConfiguration?.redirectedCall ? issueConfiguration.redirectedCall : "{{$time}} Uhr: Anruf weitergeleitet zu {{$sipgateUsername}}",
+            issueConfiguration?.answerCall ? issueConfiguration.answerCall : "{{$time}} Uhr: Anruf angenommen von {{$sipgateUsername}}",
+            issueConfiguration?.normalClearing ? issueConfiguration.normalClearing : "{{$time}} Uhr: Anruf aufgelegt.",
+            issueConfiguration?.callDuration ? issueConfiguration.callDuration : "Anrufdauer: {{$minutes}}:{{$seconds}} Minuten.",
+            issueConfiguration?.busy ? issueConfiguration.busy : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person beschäftigt war.",
+            issueConfiguration?.cancel ? issueConfiguration.cancel : "{{$time}} Uhr: Der Anruf wurde beendet bevor eine Person ran gehen konnte.",
+            issueConfiguration?.noAnswer ? issueConfiguration.noAnswer : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.",
+            issueConfiguration?.congestion ? issueConfiguration.congestion : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
+            issueConfiguration?.notFound ? issueConfiguration.notFound : "{{$time}} Uhr: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
         ])
     }, [])
 
@@ -127,7 +126,7 @@ function App() {
                             </Head>
                             <Row>
                                 <Cell>
-                                    <Text><Strong>issueSummary</Strong>: {`This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von {{$numberOrName}} {{$spamRatingField}} {{$cityField}}  - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.`}</Text>
+                                    <Text>{`This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von {{$numberOrName}} {{$spamRatingField}} {{$cityField}}  - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="issueSummary" type="text" isRequired defaultValue={issueConfig[0]} />
@@ -135,7 +134,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text><Strong>spamRating</Strong>: {`This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: {{ $rating }})", where {{ $rating }} represents the spam rating.`}</Text>
+                                    <Text>{`This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: {{ $rating }})", where {{ $rating }} represents the spam rating.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="spamRatingField" type="text" isRequired defaultValue={issueConfig[1]} />
@@ -143,7 +142,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text><Strong>cityField</Strong>: {`This field specifies the caller's city for the ticket. If left blank, it will default to " aus {{ $city }}", where {{ $city }} represents the caller's city.`}</Text>
+                                    <Text>{`This field specifies the caller's city for the ticket. If left blank, it will default to " aus {{ $city }}", where {{ $city }} represents the caller's city.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="cityField" type="text" isRequired defaultValue={issueConfig[2]} />
@@ -151,10 +150,82 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text><Strong>closeID</Strong>: This field specifies the workflow trigger to execute onHangup</Text>
+                                    <Text>{``}</Text>
                                 </Cell>
                                 <Cell>
-                                    <TextField name="closeID" type="number" isRequired defaultValue={issueConfig[3]} />
+                                    <TextField name="incommingCall" type="text" isRequired defaultValue={issueConfig[3]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="redirectedCall" type="text" isRequired defaultValue={issueConfig[4]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="answerCall" type="text" isRequired defaultValue={issueConfig[5]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="normalClearing" type="text" isRequired defaultValue={issueConfig[6]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="callDuration" type="text" isRequired defaultValue={issueConfig[7]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="busy" type="text" isRequired defaultValue={issueConfig[8]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="cancel" type="text" isRequired defaultValue={issueConfig[9]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="noAnswer" type="text" isRequired defaultValue={issueConfig[10]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="congestion" type="text" isRequired defaultValue={issueConfig[11]} />
+                                </Cell>
+                            </Row>
+                            <Row>
+                                <Cell>
+                                    <Text>{``}</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="notFound" type="text" isRequired defaultValue={issueConfig[12]} />
                                 </Cell>
                             </Row>
                         </Table>
@@ -210,6 +281,14 @@ function App() {
                                     <TextField name="issueID" isRequired type="number" />
                                 </Cell>
                             </Row>
+                            <Row>
+                                <Cell>
+                                    <Text><Strong>closeID</Strong>: This field specifies the workflow trigger to execute onHangup</Text>
+                                </Cell>
+                                <Cell>
+                                    <TextField name="closeID" type="number" isRequired />
+                                </Cell>
+                            </Row>
                         </Table>
                     </Form>
                     {webTriggerURL && (
@@ -262,28 +341,28 @@ export async function SipgateCall(req) {
         const body = getBodyData(req.body)
 
         if (body.direction === "in") {
+            const queryParameters = req.queryParameters
             const answerURL = await webTrigger.getUrl("sipgateAnswer")
             const hangupURL = await webTrigger.getUrl("sipgateHangup")
+            const issueConfiguration = await storage.get("issueConfiguration")
             const dateData = dayjs().add(2, "hour")
             const time = dateData.format("HH:mm:ss")
 
             console.log(body)
+            console.log(queryParameters)
 
             if (!body.diversion) {
-                const queryParameters = req.queryParameters
                 const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
-                const issueSummary = await storage.get("issueSummary")
-                const spamRatingField = await storage.get("spamRatingField")
-                const cityField = await storage.get("cityField")
-                const description = `${time} Uhr: Eingehender Anruf auf - ${cutNumber(body.to)}.`
-                let summary = `${issueSummary}`
+                const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
+                    .replace("{{$time}}", time)
+                    .replace("{{$sipgateNumber}}", body.to.replace("49231449955", ""))
+                const summary = `${issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : ""}`
                     .replace("{{$numberOrName}}", `+${body.from}`)
-                    .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${spamRatingField}`.replace("{{$rating}}", tellows.tellows.score) : "")
-                    .replace("{{$cityField}}", tellows?.tellows?.location ? `${cityField}`.replace("{{$city}}", tellows.tellows.location) : "")
+                    .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : ""}`.replace("{{$rating}}", tellows.tellows.score) : "")
+                    .replace("{{$cityField}}", tellows?.tellows?.location ? `${issueConfiguration?.cityField ? issueConfiguration.cityField : ""}`.replace("{{$city}}", tellows.tellows.location) : "")
                     .replace("{{$date}}", dateData.format("DD.MM.YY"))
                     .replace("{{$time}}", time)
-
                 const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
                     method: "POST",
                     headers: {
@@ -327,7 +406,9 @@ export async function SipgateCall(req) {
                 const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
                 if (data) {
-                    const description = `${data.description}\n${time} Uhr: Anruf weitergeleitet zu ${user.replace("+", " ")}.`
+                    const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
+                        .replace("{{$time}}", time)
+                        .replace("{{$sipgateUsername}}", user.replace("+", " "))
 
                     await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                         method: "PUT",
@@ -342,7 +423,7 @@ export async function SipgateCall(req) {
                                         {
                                             content: [
                                                 {
-                                                    text: description,
+                                                    text: `${data.description}${description}`,
                                                     type: "text"
                                                 }
                                             ],
@@ -356,7 +437,7 @@ export async function SipgateCall(req) {
                         })
                     })
 
-                    await storage.set(body.xcid, { ...data, description })
+                    await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
                 }
             }
 
@@ -365,7 +446,7 @@ export async function SipgateCall(req) {
                 body: xml({
                     Response: [
                         { _attr: { onAnswer: answerURL } },
-                        { _attr: { onHangup: hangupURL } }
+                        { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
                     ]
                 }),
                 statusCode: 200,
@@ -391,12 +472,15 @@ export async function SipgateAnswer(req) {
             const dateData = dayjs().add(2, "hour")
             const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
             const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
+            const issueConfiguration = await storage.get("issueConfiguration")
             const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
             console.log(body)
 
             if (data) {
-                const description = `${data.description}\n${dateData.format("HH:mm:ss")} Uhr: Anruf angenommen von ${user.replace("+", " ")}.`
+                const description = `${issueConfiguration?.answerCall ? `\n${issueConfiguration.answerCall}` : ""}`
+                    .replace("{{$time}}", dateData.format("HH:mm:ss"))
+                    .replace("{{$sipgateUsername}}", user.replace("+", " "))
 
                 await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
@@ -411,7 +495,7 @@ export async function SipgateAnswer(req) {
                                     {
                                         content: [
                                             {
-                                                text: description,
+                                                text: `${data.description}${description}`,
                                                 type: "text"
                                             }
                                         ],
@@ -425,7 +509,7 @@ export async function SipgateAnswer(req) {
                     })
                 })
 
-                await storage.set(body.xcid, { ...data, description, date: dateData.toJSON() })
+                await storage.set(body.xcid, { ...data, description: `${data.description}${description}`, date: dateData.toJSON() })
 
                 if (accountId) {
                     await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
@@ -465,21 +549,25 @@ export async function SipgateHangup(req) {
         if (body.direction === "in") {
             const cause = body.cause
             const data = await storage.get(body.xcid)
+            const issueConfiguration = await storage.get("issueConfiguration")
             const dateData = dayjs().add(2, "hour")
-            const time = `\n${dateData.format("HH:mm:ss")} Uhr: `
+            const time = dateData.format("HH:mm:ss")
             let description
 
             console.log(body)
 
             if (cause === "normalClearing") {
-                const closeID = await storage.get("closeID")
+                const queryParameters = req.queryParameters
 
                 if (data) {
                     const callDuration = dateData.diff(dayjs(data.date), "s")
 
-                    description = `${data.description}${time}Anruf aufgelegt.\n\nAnrufdauer: ${`${Math.floor(callDuration / 60)}`.padStart(2, "0")}:${`${callDuration % 60}`.padStart(2, "0")} Minuten.`
+                    description = `${issueConfiguration?.normalClearing ? `\n${issueConfiguration.normalClearing}` : ""}${issueConfiguration?.callDuration ? `\n\n${issueConfiguration.callDuration}` : ""}`
+                        .replace("{{$time}}", time)
+                        .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
+                        .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
-                    if (closeID && !body.diversion) {
+                    if (queryParameters.closeID && !body.diversion) {
                         await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
                             method: "POST",
                             headers: {
@@ -487,26 +575,15 @@ export async function SipgateHangup(req) {
                                 "Content-Type": "application/json"
                             },
                             body: JSON.stringify({
-                                transition: { "id": closeID }
+                                transition: { "id": queryParameters.closeID[0] }
                             })
                         })
                     }
                 }
             }
-            else if (cause === "busy") {
-                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person beschäftigt war.`
-            }
-            else if (cause === "cancel") {
-                description = `${data.description}${time}Der Anruf wurde beendet bevor eine Person ran gehen konnte.`
-            }
-            else if (cause === "noAnswer") {
-                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.`
-            }
-            else if (cause === "congestion") {
-                description = `${data.description}${time}Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.`
-            }
-            else if (cause === "notFound") {
-                description = `${data.description}${time}Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.`
+            else if (cause !== "forwarded") {
+                description = `${issueConfiguration?.[cause] ? `\n${issueConfiguration[cause]}` : ""}`
+                    .replace("{{$time}}", time)
             }
 
             if (description) {
@@ -523,7 +600,7 @@ export async function SipgateHangup(req) {
                                     {
                                         content: [
                                             {
-                                                text: description,
+                                                text: `${data.description}${description}`,
                                                 type: "text"
                                             }
                                         ],
@@ -536,12 +613,15 @@ export async function SipgateHangup(req) {
                         }
                     })
                 })
-            }
 
-            if (!body.diversion) {
-                console.log("DELETE")
+                if (!body.diversion) {
+                    console.log("DELETE")
 
-                await storage.delete(body.xcid)
+                    await storage.delete(body.xcid)
+                }
+                else {
+                    await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
+                }
             }
 
             return {
