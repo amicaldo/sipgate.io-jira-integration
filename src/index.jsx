@@ -122,7 +122,7 @@ function App() {
                                     <Heading size="medium">Description</Heading>
                                 </Cell>
                                 <Cell>
-                                    <Heading size="medium">Cofiguration</Heading>
+                                    <Heading size="medium">Configuration</Heading>
                                 </Cell>
                             </Head>
                             <Row>
@@ -183,7 +183,7 @@ function App() {
                                     <Heading size="medium">Description</Heading>
                                 </Cell>
                                 <Cell>
-                                    <Heading size="medium">Cofiguration</Heading>
+                                    <Heading size="medium">Configuration</Heading>
                                 </Cell>
                             </Head>
                             <Row>
