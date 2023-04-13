@@ -126,7 +126,7 @@ function App() {
                             </Head>
                             <Row>
                                 <Cell>
-                                    <Text>{`This field specifies the summary of the issue for the ticket. If left blank, it will default to "Anruf von {{$numberOrName}} {{$spamRatingField}} {{$cityField}}  - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.`}</Text>
+                                    <Text>{`This field specifies the summary of the issue for the ticket. The default text is "Anruf von {{$numberOrName}} {{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr", where {{$numberOrName}} represents the caller's number or name, {{$spamRatingField}} represents the spam rating, {{$cityField}} represents the caller's city, and {{$date}} and {{$time}} represent the date and time of the call.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="issueSummary" type="text" isRequired defaultValue={issueConfig[0]} />
@@ -134,7 +134,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{`This field specifies the spam rating for the ticket. If left blank, it will default to " (Rate: {{ $rating }})", where {{ $rating }} represents the spam rating.`}</Text>
+                                    <Text>{`This field specifies the spam rating for the ticket.The default text is " (Rate: {{$rating}})", where {{$rating}} represents the spam rating.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="spamRatingField" type="text" isRequired defaultValue={issueConfig[1]} />
@@ -142,7 +142,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{`This field specifies the caller's city for the ticket. If left blank, it will default to " aus {{ $city }}", where {{ $city }} represents the caller's city.`}</Text>
+                                    <Text>{`This field specifies the caller's city for the ticket.The default text is " aus {{$city}}", where {{$city}} represents the caller's city.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="cityField" type="text" isRequired defaultValue={issueConfig[2]} />
@@ -150,7 +150,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the incomming call log entry. The default text is "{{$time}} Uhr: Eingehender Anruf auf - {{$sipgateNumber}}", where {{$time}} represents the time the log entry got created and {{$sipgateNumber}} represents the last digits of the called number.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="incommingCall" type="text" isRequired defaultValue={issueConfig[3]} />
@@ -158,7 +158,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the redirected call log entry. The default text is "{{$time}} Uhr: Anruf weitergeleitet zu {{$sipgateUsername}}", where {{$time}} represents the time the log entry got created and {{$sipgateUsername}} represents the sipgate user name of the member the call got redirected to.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="redirectedCall" type="text" isRequired defaultValue={issueConfig[4]} />
@@ -166,7 +166,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the answer call log entry. The default text is "{{$time}} Uhr: Anruf angenommen von {{$sipgateUsername}}", where {{$time}} represents the time the log entry got created and {{$sipgateUsername}} represents the sipgate user name of the member that answered.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="answerCall" type="text" isRequired defaultValue={issueConfig[5]} />
@@ -174,7 +174,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the call ended log entry. The default text is "{{$time}} Uhr: Anruf aufgelegt.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="normalClearing" type="text" isRequired defaultValue={issueConfig[6]} />
@@ -182,7 +182,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the call duration log entry. The default text is "Anrufdauer: {{$minutes}}:{{$seconds}} Minuten.", where {{$minute}} represents the minutes the call lasted and {{$seconds}} represents the seconds the call lasted.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="callDuration" type="text" isRequired defaultValue={issueConfig[7]} />
@@ -190,7 +190,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the occupied log entry. The default text is "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person beschäftigt war.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="busy" type="text" isRequired defaultValue={issueConfig[8]} />
@@ -198,7 +198,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the hung up log entry. The default text is "{{$time}} Uhr: Der Anruf wurde beendet bevor eine Person ran gehen konnte.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="cancel" type="text" isRequired defaultValue={issueConfig[9]} />
@@ -206,7 +206,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the rejected call log entry. The default text is "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="noAnswer" type="text" isRequired defaultValue={issueConfig[10]} />
@@ -214,7 +214,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the could not reach call log entry. The default text is "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="congestion" type="text" isRequired defaultValue={issueConfig[11]} />
@@ -222,7 +222,7 @@ function App() {
                             </Row>
                             <Row>
                                 <Cell>
-                                    <Text>{``}</Text>
+                                    <Text>{`This field specifies the could not be found call log entry. The default text is "{{$time}} Uhr: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.", where {{$time}} represents the time the log entry got created.`}</Text>
                                 </Cell>
                                 <Cell>
                                     <TextField name="notFound" type="text" isRequired defaultValue={issueConfig[12]} />
