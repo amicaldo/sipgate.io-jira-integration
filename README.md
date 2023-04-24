@@ -1,34 +1,33 @@
-# Forge Hello World
+# Sipgate & Jira Integration
 
-This project contains a Forge app written in Javascript that displays `Hello World!` in a Jira admin page. 
+This integration allows incoming calls on Sipgate to be automatically turned into Jira tickets. To configure the integration, follow these steps:
 
-See [developer.atlassian.com/platform/forge/](https://developer.atlassian.com/platform/forge) for documentation and tutorials explaining Forge.
+## Configure Issue Creation
 
-## Requirements
+1. Go to "Apps" -> "Manage apps" -> "Sipgate & Jira" and set up the issue configuration for creating tickets with the desired title and description.
 
-See [Set up Forge](https://developer.atlassian.com/platform/forge/set-up-forge/) for instructions to get set up.
+    * `issueSummary`: The title of the Jira ticket. This field can include placeholders for call information, such as `{{$numberOrName}}` for the caller's number or name, `{{$spamRatingField}}` for the spam rating, `{{$cityField}}` for the caller's city, `{{$date}}` and `{{$time}}` for the date and time of the call.
 
-## Quick start
+    * `issueDescription`: The description of the Jira ticket. This field can also include placeholders for call information.
 
-- Modify your app by editing the `src/index.jsx` file.
+    * `issueType`: The type of issue to be created. This field determines the workflow that the ticket will follow in Jira.
 
-- Build and deploy your app by running:
-```
-forge deploy
-```
+    * `issuePriority`: The priority of the ticket, ranging from low to high.
 
-- Install your app in an Atlassian site by running:
-```
-forge install
-```
+    * `issueAssignee`: The Jira user to whom the ticket will be assigned. This can be set to a specific user or left blank to assign the ticket to the project lead.
 
-- Develop your app by running `forge tunnel` to proxy invocations locally:
-```
-forge tunnel
-```
+## Generate the Webhook URL
 
-### Notes
-- Use the `forge deploy` command when you want to persist code changes.
-- Use the `forge install` command when you want to install the app on a new site.
-- Once the app is installed on a site, the site picks up the new app changes you deploy without needing to rerun the install command.
+2. In the Sipgate account settings, generate the webhook URL to ensure that tickets are created in the correct Jira project. The following fields are required for configuring the webhook:
 
+    * `projectID`: The ID of the Jira project in which the ticket will be created.
+
+    * `cField1`: The field in which the incoming call's telephone number will be stored.
+
+    * `issueID`: The ID of the issue type to be created for the incoming call.
+
+## Map Jira Accounts
+
+3. Map all employees and accounts in Jira to their corresponding accounts in Sipgate.
+
+This application is created and maintained by amicaldo GmbH. If you need further assistance, please contact support at support@amicaldo.de.
