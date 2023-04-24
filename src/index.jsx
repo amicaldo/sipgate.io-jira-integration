@@ -50,7 +50,7 @@ function App() {
     }
 
     useEffect(async () => {
-        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search`, { headers: { "Accept": "application/json" } })
+        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search`, { headers: { "Accept": "application/json" }, body: JSON.stringify({maxResults: 500}) })
         const usersData = await usersRaw.json()
         const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.active)
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
