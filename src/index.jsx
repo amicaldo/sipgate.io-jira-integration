@@ -52,12 +52,14 @@ function App() {
     useEffect(async () => {
         const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search`, { headers: { "Accept": "application/json" } })
         const usersData = await usersRaw.json()
-        const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.displayName !== "Former user")
+        const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.active)
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
         let issueConfiguration = await storage.get("issueSummary")
         let storageData = []
         let usersArr = []
         let cursor = ""
+
+        console.log(usersData)
 
         for (let i = 0; i < dataLength; i++) {
             const storageDataPull = await storage.query().where("key", startsWith("sipgate_id_")).limit(20).cursor(cursor).getMany()
