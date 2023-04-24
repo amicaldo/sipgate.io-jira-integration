@@ -1,6 +1,16 @@
 # Sipgate & Jira Integration
 
-This integration allows incoming calls on Sipgate to be automatically turned into Jira tickets. To configure the integration, follow these steps:
+This integration allows you to capture incoming calls on Sipgate and automatically turn them into Jira tickets. The Sipgate & Jira app offers the following features:
+
+- Capturing incoming calls: Whenever a call comes in, the app captures it and creates a ticket in Jira.
+
+- Recording call details: The app logs the time and date of the incoming call, whether it was answered, and who answered it.
+
+- Logging call duration: The app records how long the call lasted and updates the ticket once it is ended.
+
+- Updating tickets: The app updates the ticket in real-time with call information, such as call duration, whether the call was transferred to another employee, and more.
+ 
+To configure the integration, follow these steps:
 
 ## Configure Issue Creation
 
