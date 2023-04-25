@@ -113,7 +113,7 @@ function App() {
                 <Tab label="Issue Configuration">
                     <SectionMessage title="About">
                         <Text>
-                            This tab allows you to configure the issue design. Here you can configure what the tool should output and what not.
+                            This tab allows you to configure the issue design. Here you can configure what the tool should output and what not. You need to atleast have confirmed these settings ONCE, so the API knows what to use for what, otherwise it will not work.
                         </Text>
                     </SectionMessage>
                     <Form onSubmit={issueSubmit}>
