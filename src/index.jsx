@@ -50,7 +50,7 @@ function App() {
     }
 
     useEffect(async () => {
-        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search`, { headers: { "Accept": "application/json" }, body: JSON.stringify({maxResults: 500}) })
+        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=0&maxResults=500&query=+&includeActive=true&includeInActive=false&productUse=jira-software`, { headers: { "Accept": "application/json" } })
         const usersData = await usersRaw.json()
         const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.active)
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
@@ -350,10 +350,12 @@ export async function SipgateCall(req) {
             const dateData = dayjs().add(2, "hour")
             const time = dateData.format("HH:mm:ss")
 
-            console.log(body)
-            console.log(queryParameters)
+            console.log("Call Body Data: ", body)
+            console.log("Call Query Parameters: ", queryParameters)
 
             if (!body.diversion) {
+                console.log("Call -> First Call")
+
                 const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
                 const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
@@ -401,18 +403,26 @@ export async function SipgateCall(req) {
                 })
                 const issue = await issueRaw.json()
 
+                console.log("Call First Call Description: ", description)
+                console.log("Call First Call Response: ", issueRaw)
+                console.log("Call First Call Issue: ", issue)
+
                 await storage.set(body.xcid, { id: issue.id, description })
             }
             else {
+                console.log("Call -> Diversion")
+
                 const data = await storage.get(body.xcid)
                 const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
                 if (data) {
+                    console.log("Call Diversion Got Data")
+
                     const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
                         .replace("{{$time}}", time)
                         .replace("{{$sipgateUsername}}", user.replace("+", " "))
 
-                    await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                         method: "PUT",
                         headers: {
                             "Accept": "application/json",
@@ -439,6 +449,9 @@ export async function SipgateCall(req) {
                         })
                     })
 
+                    console.log("Call Diversion Edit Issue Response: ", resDes)
+                    console.log("Call Diversion new Description: ", `${data.description}${description}`)
+
                     await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
                 }
             }
@@ -456,6 +469,8 @@ export async function SipgateCall(req) {
             }
         }
     } catch (error) {
+        console.error("Call Error", error)
+
         return {
             body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
@@ -477,14 +492,14 @@ export async function SipgateAnswer(req) {
             const issueConfiguration = await storage.get("issueConfiguration")
             const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
-            console.log(body)
+            console.log("Answer Body: ", body)
 
             if (data) {
                 const description = `${issueConfiguration?.answerCall ? `\n${issueConfiguration.answerCall}` : ""}`
                     .replace("{{$time}}", dateData.format("HH:mm:ss"))
                     .replace("{{$sipgateUsername}}", user.replace("+", " "))
 
-                await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
                     headers: {
                         "Accept": "application/json",
@@ -511,10 +526,15 @@ export async function SipgateAnswer(req) {
                     })
                 })
 
+                console.log("Answer Edit Issue Response: ", resDes)
+                console.log("Answer new Description: ", `${data.description}${description}`)
+
                 await storage.set(body.xcid, { ...data, description: `${data.description}${description}`, date: dateData.toJSON() })
 
                 if (accountId) {
-                    await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
+                    console.log("Answer AccountID: ", accountId)
+
+                    const resAs = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
                         method: "PUT",
                         headers: {
                             "Accept": "application/json",
@@ -524,6 +544,8 @@ export async function SipgateAnswer(req) {
                             accountId
                         })
                     })
+
+                    console.log("Answer Assign Response: ", resAs)
                 }
             }
 
@@ -535,6 +557,8 @@ export async function SipgateAnswer(req) {
             }
         }
     } catch (error) {
+        console.error("Answer Error:", error)
+
         return {
             body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
@@ -556,7 +580,8 @@ export async function SipgateHangup(req) {
             const time = dateData.format("HH:mm:ss")
             let description
 
-            console.log(body)
+            console.log("Hangup Body: ", body)
+            console.log("Hangup Cause: ", cause)
 
             if (cause === "normalClearing") {
                 const queryParameters = req.queryParameters
@@ -570,7 +595,7 @@ export async function SipgateHangup(req) {
                         .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
                     if (queryParameters.closeID && !body.diversion) {
-                        await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
+                        const resTrans = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
                             method: "POST",
                             headers: {
                                 "Accept": "application/json",
@@ -580,6 +605,8 @@ export async function SipgateHangup(req) {
                                 transition: { "id": queryParameters.closeID[0] }
                             })
                         })
+
+                        console.log("Hangup Transsition Response: ", resTrans)
                     }
                 }
             }
@@ -589,7 +616,7 @@ export async function SipgateHangup(req) {
             }
 
             if (description) {
-                await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
                     headers: {
                         "Accept": "application/json",
@@ -616,8 +643,11 @@ export async function SipgateHangup(req) {
                     })
                 })
 
+                console.log("Hangup Edit Issue Response: ", resDes)
+                console.log("Hangup new Description: ", `${data.description}${description}`)
+
                 if (!body.diversion) {
-                    console.log("DELETE")
+                    console.log("Hangup deleted Storage für XCID: ", body.xcid)
 
                     await storage.delete(body.xcid)
                 }
@@ -634,6 +664,8 @@ export async function SipgateHangup(req) {
             }
         }
     } catch (error) {
+        console.error("Hangup Error: ", error)
+
         return {
             body: error + "  ",
             headers: { "Content-Type": ["application/json"] },
