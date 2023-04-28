@@ -1,7 +1,7 @@
 import xml from "xml"
 import dayjs from "dayjs"
 import api, { fetch, route, startsWith, storage, webTrigger } from "@forge/api"
-import ForgeUI, { render, AdminPage, useState, useEffect, Cell, Fragment, Form, Head, Heading, Row, SectionMessage, Strong, Table, Tab, Tabs, Text, TextField, User } from "@forge/ui"
+import ForgeUI, { render, AdminPage, useState, useEffect, Cell, Checkbox, CheckboxGroup, Code, Fragment, Form, Head, Heading, Row, SectionMessage, Strong, Table, Tab, Tabs, Text, TextField, User } from "@forge/ui"
 
 function getBodyData(body) {
     let obj = {}
@@ -19,6 +19,8 @@ function App() {
     const [issueConfig, setIssueConfig] = useState([])
     const [webTriggerURL, setWebTriggerURL] = useState("")
     const [users, setUsers] = useState([])
+    const [debug, setDebug] = useState(false)
+    const [debugLog, setDebugLog] = useState([])
     const issueSubmit = async ({ issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound }) => {
         await storage.set("issueConfiguration", { issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound })
 
@@ -48,18 +50,25 @@ function App() {
 
         setUsers(usersCopy)
     }
+    const debugSubmit = async formData => {
+        await storage.set("debugOption", formData?.debug?.indexOf("debug") > -1)
+        await storage.set("debugLog", formData?.debug?.indexOf("log") > -1 ? [] : debugLog)
+
+        setDebug(formData?.debug?.indexOf("debug") > -1)
+        setDebugLog(formData?.debug?.indexOf("log") > -1 ? [] : debugLog)
+    }
 
     useEffect(async () => {
         const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=0&maxResults=500&query=+&includeActive=true&includeInActive=false&productUse=jira-software`, { headers: { "Accept": "application/json" } })
         const usersData = await usersRaw.json()
         const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.active)
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
-        let issueConfiguration = await storage.get("issueSummary")
+        const issueConfiguration = await storage.get("issueSummary")
+        const debugOption = await storage.get("debugOption")
+        const debugLog = await storage.get("debugLog")
         let storageData = []
         let usersArr = []
         let cursor = ""
-
-        console.log(usersData)
 
         for (let i = 0; i < dataLength; i++) {
             const storageDataPull = await storage.query().where("key", startsWith("sipgate_id_")).limit(20).cursor(cursor).getMany()
@@ -101,6 +110,8 @@ function App() {
             issueConfiguration?.congestion ? issueConfiguration.congestion : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
             issueConfiguration?.notFound ? issueConfiguration.notFound : "{{$time}} Uhr: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
         ])
+        setDebug(debugOption !== undefined ? debugOption : false)
+        setDebugLog(debugLog !== undefined ? debugLog : [])
     }, [])
 
     return (
@@ -333,28 +344,61 @@ function App() {
                         </Form>
                     )}
                 </Tab>
+                <Tab label="Debug">
+                    <SectionMessage title="About">
+                        <Text>
+                            This is for debugging the Tool.
+                            Enable it below, then it will log alot of information.
+                        </Text>
+                    </SectionMessage>
+                    <Form onSubmit={debugSubmit}>
+                        <CheckboxGroup name="debug">
+                            <Checkbox value="debug" label="Debug Enable/Disable" defaultChecked={debug} />
+                            <Checkbox value="log" label="Clear Log" />
+                        </CheckboxGroup>
+                    </Form>
+                    {debugLog.length > 0 && (
+                        <Fragment>
+                            <Heading>Log Entries</Heading>
+                            {debugLog.map(log => (
+                                <Code text={log} />
+                            ))}
+                        </Fragment>
+                    )}
+                </Tab>
             </Tabs>
         </Fragment>
     )
 }
 
 export async function SipgateCall(req) {
+    const debug = await storage.get("debugOption")
+    const debugLog = await storage.get("debugLog")
+    const dateData = dayjs().add(2, "hour")
+    const time = dateData.format("HH:mm:ss")
+
     try {
         const body = getBodyData(req.body)
+        const queryParameters = req.queryParameters
+
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+            debugLog.push(`${time} Uhr: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
 
         if (body.direction === "in") {
-            const queryParameters = req.queryParameters
             const answerURL = await webTrigger.getUrl("sipgateAnswer")
             const hangupURL = await webTrigger.getUrl("sipgateHangup")
             const issueConfiguration = await storage.get("issueConfiguration")
-            const dateData = dayjs().add(2, "hour")
-            const time = dateData.format("HH:mm:ss")
-
-            console.log("Call Body Data: ", body)
-            console.log("Call Query Parameters: ", queryParameters)
 
             if (!body.diversion) {
-                console.log("Call -> First Call")
+                if (debug) {
+                    debugLog.push(`${time} Uhr: SipgateCall Func -> Creating Issue`)
+
+                    await storage.set("debugLog", debugLog)
+                }
 
                 const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
@@ -403,21 +447,27 @@ export async function SipgateCall(req) {
                 })
                 const issue = await issueRaw.json()
 
-                console.log("Call First Call Description: ", description)
-                console.log("Call First Call Response: ", issueRaw)
-                console.log("Call First Call Issue: ", issue)
+                if (debug) {
+                    debugLog.push(`${time} Uhr: SipcateCall Func -> Issue Description: ${description}`)
+                    debugLog.push(`${time} Uhr: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
+                    debugLog.push(`${time} Uhr: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
+
+                    await storage.set("debugLog", debugLog)
+                }
 
                 await storage.set(body.xcid, { id: issue.id, description })
             }
             else {
-                console.log("Call -> Diversion")
+                if (debug) {
+                    debugLog.push(`${time} Uhr: SipgateCall Func -> Redirection Call`)
+
+                    await storage.set("debugLog", debugLog)
+                }
 
                 const data = await storage.get(body.xcid)
                 const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
                 if (data) {
-                    console.log("Call Diversion Got Data")
-
                     const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
                         .replace("{{$time}}", time)
                         .replace("{{$sipgateUsername}}", user.replace("+", " "))
@@ -449,8 +499,12 @@ export async function SipgateCall(req) {
                         })
                     })
 
-                    console.log("Call Diversion Edit Issue Response: ", resDes)
-                    console.log("Call Diversion new Description: ", `${data.description}${description}`)
+                    if (debug) {
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+
+                        await storage.set("debugLog", debugLog)
+                    }
 
                     await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
                 }
@@ -460,7 +514,7 @@ export async function SipgateCall(req) {
                 headers: { "Content-Type": ["application/xml"] },
                 body: xml({
                     Response: [
-                        { _attr: { onAnswer: answerURL } },
+                        { _attr: { onAnswer: `${answerURL}` } },
                         { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
                     ]
                 }),
@@ -469,7 +523,11 @@ export async function SipgateCall(req) {
             }
         }
     } catch (error) {
-        console.error("Call Error", error)
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipcateCall Func -> Error: ${JSON.stringify(error, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
 
         return {
             body: error + "  ",
@@ -481,22 +539,36 @@ export async function SipgateCall(req) {
 }
 
 export async function SipgateAnswer(req) {
+    const debug = await storage.get("debugOption")
+    const debugLog = await storage.get("debugLog")
+    const dateData = dayjs().add(2, "hour")
+    const time = dateData.format("HH:mm:ss")
+
     try {
         const body = getBodyData(req.body)
 
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
+
         if (body.direction === "in") {
+            if (debug) {
+                debugLog.push(`${time} Uhr: SipgateAnswer Func -> Answering Call`)
+
+                await storage.set("debugLog", debugLog)
+            }
+
             const data = await storage.get(body.xcid)
-            const dateData = dayjs().add(2, "hour")
             const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
             const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
             const issueConfiguration = await storage.get("issueConfiguration")
             const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
-            console.log("Answer Body: ", body)
-
             if (data) {
                 const description = `${issueConfiguration?.answerCall ? `\n${issueConfiguration.answerCall}` : ""}`
-                    .replace("{{$time}}", dateData.format("HH:mm:ss"))
+                    .replace("{{$time}}", time)
                     .replace("{{$sipgateUsername}}", user.replace("+", " "))
 
                 const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
@@ -526,14 +598,18 @@ export async function SipgateAnswer(req) {
                     })
                 })
 
-                console.log("Answer Edit Issue Response: ", resDes)
-                console.log("Answer new Description: ", `${data.description}${description}`)
+                if (debug) {
+                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`)
+                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> User: ${JSON.stringify(user, null, 4)}`)
+                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> Edited Description: ${data.description}${description}`)
+
+                    await storage.set("debugLog", debugLog)
+                }
 
                 await storage.set(body.xcid, { ...data, description: `${data.description}${description}`, date: dateData.toJSON() })
 
                 if (accountId) {
-                    console.log("Answer AccountID: ", accountId)
-
                     const resAs = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/assignee`, {
                         method: "PUT",
                         headers: {
@@ -545,7 +621,11 @@ export async function SipgateAnswer(req) {
                         })
                     })
 
-                    console.log("Answer Assign Response: ", resAs)
+                    if (debug) {
+                        debugLog.push(`${time} Uhr: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`)
+
+                        await storage.set("debugLog", debugLog)
+                    }
                 }
             }
 
@@ -557,7 +637,11 @@ export async function SipgateAnswer(req) {
             }
         }
     } catch (error) {
-        console.error("Answer Error:", error)
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Error: ${JSON.stringify(error, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
 
         return {
             body: error + "  ",
@@ -569,23 +653,36 @@ export async function SipgateAnswer(req) {
 }
 
 export async function SipgateHangup(req) {
+    const debug = await storage.get("debugOption")
+    const debugLog = await storage.get("debugLog")
+    const dateData = dayjs().add(2, "hour")
+    const time = dateData.format("HH:mm:ss")
+
     try {
         const body = getBodyData(req.body)
+        const queryParameters = req.queryParameters
+
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipgateHangup Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+            debugLog.push(`${time} Uhr: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
 
         if (body.direction === "in") {
             const cause = body.cause
             const data = await storage.get(body.xcid)
             const issueConfiguration = await storage.get("issueConfiguration")
-            const dateData = dayjs().add(2, "hour")
-            const time = dateData.format("HH:mm:ss")
             let description
 
-            console.log("Hangup Body: ", body)
-            console.log("Hangup Cause: ", cause)
+            if (debug) {
+                debugLog.push(`${time} Uhr: SipgateHangup Func -> Ending Call`)
+                debugLog.push(`${time} Uhr: SipgateHangup Func -> Cause: ${cause}`)
+
+                await storage.set("debugLog", debugLog)
+            }
 
             if (cause === "normalClearing") {
-                const queryParameters = req.queryParameters
-
                 if (data) {
                     const callDuration = dateData.diff(dayjs(data.date), "s")
 
@@ -606,7 +703,11 @@ export async function SipgateHangup(req) {
                             })
                         })
 
-                        console.log("Hangup Transsition Response: ", resTrans)
+                        if (debug) {
+                            debugLog.push(`${time} Uhr: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`)
+
+                            await storage.set("debugLog", debugLog)
+                        }
                     }
                 }
             }
@@ -643,11 +744,19 @@ export async function SipgateHangup(req) {
                     })
                 })
 
-                console.log("Hangup Edit Issue Response: ", resDes)
-                console.log("Hangup new Description: ", `${data.description}${description}`)
+                if (debug) {
+                    debugLog.push(`${time} Uhr: SipgateHangup Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                    debugLog.push(`${time} Uhr: SipgateHangup Func -> Edited Description: ${data.description}${description}`)
 
-                if (!body.diversion) {
-                    console.log("Hangup deleted Storage für XCID: ", body.xcid)
+                    await storage.set("debugLog", debugLog)
+                }
+
+                if (cause == "normalClearing") {
+                    if (debug) {
+                        debugLog.push(`${time} Uhr: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`)
+
+                        await storage.set("debugLog", debugLog)
+                    }
 
                     await storage.delete(body.xcid)
                 }
@@ -664,7 +773,11 @@ export async function SipgateHangup(req) {
             }
         }
     } catch (error) {
-        console.error("Hangup Error: ", error)
+        if (debug) {
+            debugLog.push(`${time} Uhr: SipgateHangup Func -> Error: ${JSON.stringify(error, null, 4)}`)
+
+            await storage.set("debugLog", debugLog)
+        }
 
         return {
             body: error + "  ",
