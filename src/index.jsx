@@ -537,18 +537,13 @@ export async function SipgateAnswer(req) {
         const body = getBodyData(req.body)
 
         if (debug) {
+            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Answering Call`)
             debugLog.push(`${time} Uhr: SipgateAnswer Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
 
             await storage.set("debugLog", debugLog)
         }
 
         if (body.direction === "in") {
-            if (debug) {
-                debugLog.push(`${time} Uhr: SipgateAnswer Func -> Answering Call`)
-
-                await storage.set("debugLog", debugLog)
-            }
-
             const data = await storage.get(body.xcid)
             const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
             const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
@@ -650,8 +645,11 @@ export async function SipgateHangup(req) {
     try {
         const body = getBodyData(req.body)
         const queryParameters = req.queryParameters
+        const cause = body.cause
 
         if (debug) {
+            debugLog.push(`${time} Uhr: SipgateHangup Func -> Ending Call`)
+            debugLog.push(`${time} Uhr: SipgateHangup Func -> Cause: ${cause}`)
             debugLog.push(`${time} Uhr: SipgateHangup Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
             debugLog.push(`${time} Uhr: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
 
@@ -659,17 +657,9 @@ export async function SipgateHangup(req) {
         }
 
         if (body.direction === "in") {
-            const cause = body.cause
             const data = await storage.get(body.xcid)
             const issueConfiguration = await storage.get("issueConfiguration")
             let description
-
-            if (debug) {
-                debugLog.push(`${time} Uhr: SipgateHangup Func -> Ending Call`)
-                debugLog.push(`${time} Uhr: SipgateHangup Func -> Cause: ${cause}`)
-
-                await storage.set("debugLog", debugLog)
-            }
 
             if (cause === "normalClearing") {
                 if (data) {
