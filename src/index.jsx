@@ -389,92 +389,46 @@ export async function SipgateCall(req) {
             await storage.set("debugLog", debugLog)
         }
 
-        if (body.direction === "in") {
-            const answerURL = await webTrigger.getUrl("sipgateAnswer")
-            const hangupURL = await webTrigger.getUrl("sipgateHangup")
-            const issueConfiguration = await storage.get("issueConfiguration")
+        if (body?.to?.length > 3) {
+            if (body.direction === "in") {
+                const answerURL = await webTrigger.getUrl("sipgateAnswer")
+                const hangupURL = await webTrigger.getUrl("sipgateHangup")
+                const issueConfiguration = await storage.get("issueConfiguration")
 
-            if (!body.diversion) {
-                const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
-                const tellows = await tellowsRaw.json()
-                const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
-                    .replace("{{$time}}", time)
-                    .replace("{{$sipgateNumber}}", body.to.replace("49231449955", ""))
-                const summary = `${issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : ""}`
-                    .replace("{{$numberOrName}}", `+${body.from}`)
-                    .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : ""}`.replace("{{$rating}}", tellows.tellows.score) : "")
-                    .replace("{{$cityField}}", tellows?.tellows?.location ? `${issueConfiguration?.cityField ? issueConfiguration.cityField : ""}`.replace("{{$city}}", tellows.tellows.location) : "")
-                    .replace("{{$date}}", dateData.format("DD.MM.YY"))
-                    .replace("{{$time}}", time)
-                const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        fields: {
-                            summary,
-                            issuetype: {
-                                id: queryParameters.issueID[0]
-                            },
-                            project: {
-                                key: queryParameters.project[0]
-                            },
-                            [`customfield_${queryParameters.phoneField[0]}`]: `+${body.from}`,
-                            description: {
-                                content: [
-                                    {
-                                        content: [
-                                            {
-                                                text: description,
-                                                type: "text"
-                                            }
-                                        ],
-                                        type: "paragraph"
-                                    }
-                                ],
-                                type: "doc",
-                                version: 1
-                            }
-                        }
-                    })
-                })
-                const issue = await issueRaw.json()
-
-                if (debug) {
-                    debugLog.push(`${time} Uhr: SipcateCall Func -> Issue Description: ${description}`)
-                    debugLog.push(`${time} Uhr: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
-                    debugLog.push(`${time} Uhr: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
-
-                    await storage.set("debugLog", debugLog)
-                }
-
-                await storage.set(body.xcid, { id: issue.id, description })
-            }
-            else {
-                const data = await storage.get(body.xcid)
-                const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-
-                if (data) {
-                    const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
+                if (!body.diversion) {
+                    const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
+                    const tellows = await tellowsRaw.json()
+                    const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
                         .replace("{{$time}}", time)
-                        .replace("{{$sipgateUsername}}", user.replace("+", " "))
-
-                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
-                        method: "PUT",
+                        .replace("{{$sipgateNumber}}", body.to.replace("49231449955", ""))
+                    const summary = `${issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : ""}`
+                        .replace("{{$numberOrName}}", `+${body.from}`)
+                        .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : ""}`.replace("{{$rating}}", tellows.tellows.score) : "")
+                        .replace("{{$cityField}}", tellows?.tellows?.location ? `${issueConfiguration?.cityField ? issueConfiguration.cityField : ""}`.replace("{{$city}}", tellows.tellows.location) : "")
+                        .replace("{{$date}}", dateData.format("DD.MM.YY"))
+                        .replace("{{$time}}", time)
+                    const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+                        method: "POST",
                         headers: {
                             "Accept": "application/json",
                             "Content-Type": "application/json"
                         },
                         body: JSON.stringify({
                             fields: {
+                                summary,
+                                issuetype: {
+                                    id: queryParameters.issueID[0]
+                                },
+                                project: {
+                                    key: queryParameters.project[0]
+                                },
+                                [`customfield_${queryParameters.phoneField[0]}`]: `+${body.from}`,
                                 description: {
                                     content: [
                                         {
                                             content: [
                                                 {
-                                                    text: `${data.description}${description}`,
+                                                    text: description,
                                                     type: "text"
                                                 }
                                             ],
@@ -487,28 +441,76 @@ export async function SipgateCall(req) {
                             }
                         })
                     })
+                    const issue = await issueRaw.json()
 
                     if (debug) {
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Issue Description: ${description}`)
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
 
                         await storage.set("debugLog", debugLog)
                     }
 
-                    await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
+                    await storage.set(body.xcid, { id: issue.id, description })
                 }
-            }
+                else {
+                    const data = await storage.get(body.xcid)
+                    const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
-            return {
-                headers: { "Content-Type": ["application/xml"] },
-                body: xml({
-                    Response: [
-                        { _attr: { onAnswer: `${answerURL}` } },
-                        { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
-                    ]
-                }),
-                statusCode: 200,
-                statusText: "OK"
+                    if (data) {
+                        const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
+                            .replace("{{$time}}", time)
+                            .replace("{{$sipgateUsername}}", user.replace("+", " "))
+
+                        const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                            method: "PUT",
+                            headers: {
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                fields: {
+                                    description: {
+                                        content: [
+                                            {
+                                                content: [
+                                                    {
+                                                        text: `${data.description}${description}`,
+                                                        type: "text"
+                                                    }
+                                                ],
+                                                type: "paragraph"
+                                            }
+                                        ],
+                                        type: "doc",
+                                        version: 1
+                                    }
+                                }
+                            })
+                        })
+
+                        if (debug) {
+                            debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                            debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+
+                            await storage.set("debugLog", debugLog)
+                        }
+
+                        await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
+                    }
+                }
+
+                return {
+                    headers: { "Content-Type": ["application/xml"] },
+                    body: xml({
+                        Response: [
+                            { _attr: { onAnswer: `${answerURL}` } },
+                            { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
+                        ]
+                    }),
+                    statusCode: 200,
+                    statusText: "OK"
+                }
             }
         }
     } catch (error) {
