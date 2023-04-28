@@ -382,6 +382,7 @@ export async function SipgateCall(req) {
         const queryParameters = req.queryParameters
 
         if (debug) {
+            debugLog.push(`${time} Uhr: SipgateCall Func -> ${body.diversion ? "Redirection Call" : "Creating Issue"}`)
             debugLog.push(`${time} Uhr: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
             debugLog.push(`${time} Uhr: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
 
@@ -394,12 +395,6 @@ export async function SipgateCall(req) {
             const issueConfiguration = await storage.get("issueConfiguration")
 
             if (!body.diversion) {
-                if (debug) {
-                    debugLog.push(`${time} Uhr: SipgateCall Func -> Creating Issue`)
-
-                    await storage.set("debugLog", debugLog)
-                }
-
                 const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                 const tellows = await tellowsRaw.json()
                 const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
@@ -458,12 +453,6 @@ export async function SipgateCall(req) {
                 await storage.set(body.xcid, { id: issue.id, description })
             }
             else {
-                if (debug) {
-                    debugLog.push(`${time} Uhr: SipgateCall Func -> Redirection Call`)
-
-                    await storage.set("debugLog", debugLog)
-                }
-
                 const data = await storage.get(body.xcid)
                 const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
