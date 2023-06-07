@@ -21,6 +21,7 @@ function App() {
     const [users, setUsers] = useState([])
     const [debug, setDebug] = useState(false)
     const [debugLog, setDebugLog] = useState([])
+    const [userData, setUserData] = useState([])
     const issueSubmit = async ({ issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound }) => {
         await storage.set("issueConfiguration", { issueSummary, spamRatingField, cityField, incommingCall, redirectedCall, answerCall, normalClearing, callDuration, busy, cancel, noAnswer, congestion, notFound })
 
@@ -59,9 +60,9 @@ function App() {
     }
 
     useEffect(async () => {
-        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=0&maxResults=500&query=+&includeActive=true&includeInActive=false&productUse=jira-software`, { headers: { "Accept": "application/json" } })
+        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=0&maxResults=500`, { headers: { "Accept": "application/json" } })
         const usersData = await usersRaw.json()
-        const usersFiltered = usersData.filter(user => user.accountType !== "app" && user.active)
+        const usersFiltered = usersData.filter(user => user.accountType === "atlassian" && user.active)
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
         const issueConfiguration = await storage.get("issueSummary")
         const debugOption = await storage.get("debugOption")
@@ -110,6 +111,7 @@ function App() {
             issueConfiguration?.congestion ? issueConfiguration.congestion : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
             issueConfiguration?.notFound ? issueConfiguration.notFound : "{{$time}} Uhr: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
         ])
+        setUserData(userData)
         setDebug(debugOption !== undefined ? debugOption : false)
         setDebugLog(debugLog !== undefined ? debugLog : [])
     }, [])
@@ -365,6 +367,9 @@ function App() {
                             ))}
                         </Fragment>
                     )}
+                </Tab>
+                <Tab label="User Data">
+                    <Code text={JSON.stringify(userData)} />
                 </Tab>
             </Tabs>
         </Fragment>
