@@ -60,9 +60,32 @@ function App() {
     }
 
     useEffect(async () => {
-        const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=0&maxResults=500`, { headers: { "Accept": "application/json" } })
-        const usersData = await usersRaw.json()
-        const usersFiltered = usersData.filter(user => user.accountType === "atlassian" && user.active)
+        const getUsers = async (startAt = 0) => {
+            const usersRaw = await api.asApp().requestJira(route`/rest/api/3/users/search?startAt=${startAt}&maxResults=500`, { headers: { "Accept": "application/json" } })
+            const usersData = await usersRaw.json()
+            return usersData
+        }
+
+        let startAt = 0
+        let usersFiltered = [];
+
+        while (true) {
+            var usersData = await getUsers(startAt)
+
+            usersData.forEach(user => {
+                if (user.accountType === "atlassian" && user.active) {
+                    usersFiltered.push(user)
+                }
+            })
+
+            if (usersData.length < 500) {
+                break
+            }
+
+            startAt += 500
+        }
+
+
         const dataLength = usersFiltered.length > 20 ? Math.ceil(usersFiltered.length / 20) : 1
         const issueConfiguration = await storage.get("issueSummary")
         const debugOption = await storage.get("debugOption")
@@ -119,7 +142,7 @@ function App() {
     return (
         <Fragment>
             <Text>
-                Welcome to the configuration UI for your Sipgate + JIRA integration!
+                Welcome to the configuration UI for your Sipgate + JIRA integration by amicaldo =)
                 We will create one ticket for each incomming call. Here, you can customize the format of each ticket created for incoming calls.
             </Text>
             <Tabs>
