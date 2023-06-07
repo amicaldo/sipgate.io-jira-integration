@@ -111,7 +111,7 @@ function App() {
             issueConfiguration?.congestion ? issueConfiguration.congestion : "{{$time}} Uhr: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
             issueConfiguration?.notFound ? issueConfiguration.notFound : "{{$time}} Uhr: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
         ])
-        setUserData(userData)
+        setUserData(usersFiltered)
         setDebug(debugOption !== undefined ? debugOption : false)
         setDebugLog(debugLog !== undefined ? debugLog : [])
     }, [])
