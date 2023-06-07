@@ -429,7 +429,7 @@ export async function SipgateCall(req) {
                     const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
                         .replace("{{$time}}", time)
                         .replace("{{$sipgateNumber}}", body.to.replace("49231449955", ""))
-                    const summary = `${issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : ""}`
+                    const summary = `${issueConfiguration?.issueSummary ? issueConfiguration.issueSummary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr"}`
                         .replace("{{$numberOrName}}", `+${body.from}`)
                         .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : ""}`.replace("{{$rating}}", tellows.tellows.score) : "")
                         .replace("{{$cityField}}", tellows?.tellows?.location ? `${issueConfiguration?.cityField ? issueConfiguration.cityField : ""}`.replace("{{$city}}", tellows.tellows.location) : "")
