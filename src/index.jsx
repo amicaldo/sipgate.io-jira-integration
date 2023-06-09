@@ -417,13 +417,55 @@ export async function SipgateCall(req) {
             await storage.set("debugLog", debugLog)
         }
 
-        if (body?.to?.length > 3) {
+        if (body.to?.length > 3) {
             if (body.direction === "in") {
                 const answerURL = await webTrigger.getUrl("sipgateAnswer")
                 const hangupURL = await webTrigger.getUrl("sipgateHangup")
                 const issueConfiguration = await storage.get("issueConfiguration")
+                const data = await storage.get(body.xcid)
 
-                if (!body.diversion) {
+                if (body.diversion && data) {
+                    const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
+                    const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
+                        .replace("{{$time}}", time)
+                        .replace("{{$sipgateUsername}}", user.replace("+", " "))
+                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                        method: "PUT",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            fields: {
+                                description: {
+                                    content: [
+                                        {
+                                            content: [
+                                                {
+                                                    text: `${data.description}${description}`,
+                                                    type: "text"
+                                                }
+                                            ],
+                                            type: "paragraph"
+                                        }
+                                    ],
+                                    type: "doc",
+                                    version: 1
+                                }
+                            }
+                        })
+                    })
+
+                    if (debug) {
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+
+                        await storage.set("debugLog", debugLog)
+                    }
+
+                    await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
+                }
+                else {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                     const tellows = await tellowsRaw.json()
                     const description = `${issueConfiguration?.incommingCall ? issueConfiguration.incommingCall : ""}`
@@ -480,52 +522,6 @@ export async function SipgateCall(req) {
                     }
 
                     await storage.set(body.xcid, { id: issue.id, description })
-                }
-                else {
-                    const data = await storage.get(body.xcid)
-                    const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-
-                    if (data) {
-                        const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
-                            .replace("{{$time}}", time)
-                            .replace("{{$sipgateUsername}}", user.replace("+", " "))
-
-                        const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
-                            method: "PUT",
-                            headers: {
-                                "Accept": "application/json",
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                fields: {
-                                    description: {
-                                        content: [
-                                            {
-                                                content: [
-                                                    {
-                                                        text: `${data.description}${description}`,
-                                                        type: "text"
-                                                    }
-                                                ],
-                                                type: "paragraph"
-                                            }
-                                        ],
-                                        type: "doc",
-                                        version: 1
-                                    }
-                                }
-                            })
-                        })
-
-                        if (debug) {
-                            debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                            debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
-
-                            await storage.set("debugLog", debugLog)
-                        }
-
-                        await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
-                    }
                 }
 
                 return {
