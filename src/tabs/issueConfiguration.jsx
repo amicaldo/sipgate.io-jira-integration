@@ -1,6 +1,48 @@
-import ForgeUI, { Form, Heading, SectionMessage, Strong, Tab, Text, TextArea, TextField } from "@forge/ui"
+import { storage } from "@forge/api"
+import ForgeUI, { useEffect, useState, Code, Form, Heading, Link, SectionMessage, Strong, Tab, Text, TextArea, TextField } from "@forge/ui"
 
 export default function IssueConfiguration() {
+    const [issueConfiguration, setIssueConfiguration] = useState({})
+    const [debug, setDebug] = useState({})
+    const submitForm = async formData => {
+        setIssueConfiguration({
+            ...issueConfiguration,
+            ...formData
+        })
+        setDebug({
+            issueConfiguration: {
+                ...issueConfiguration,
+                ...formData,
+            },
+            formData
+        })
+
+        await storage.set("issueConfiguration", {
+            ...issueConfiguration,
+            ...formData
+        })
+    }
+
+    useEffect(async () => {
+        const issueConfiguration = await storage.get("issueConfiguration")
+
+        setIssueConfiguration({
+            timezone: issueConfiguration?.timezone ? issueConfiguration.timezone : "Europe/Berlin",
+            hourFormat: issueConfiguration?.hourFormat ? issueConfiguration.hourFormat : "HH:mm:ss",
+            dateFormat: issueConfiguration?.dateFormat ? issueConfiguration.dateFormat : "DD.MM.YYY",
+            sipgateNumber: issueConfiguration?.sipgateNumber ? issueConfiguration.sipgateNumber : "",
+            spamRatingField: issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : " (Rate: {{$rating}})",
+            cityField: issueConfiguration?.cityField ? issueConfiguration.cityField : " aus {{$city}}",
+            timeField: issueConfiguration?.timeField ? issueConfiguration.timeField : "{{$time}} Uhr",
+            summary: issueConfiguration?.summary ? issueConfiguration.summary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr",
+            description: issueConfiguration?.description ? issueConfiguration.description : ""
+        })
+
+        setDebug({
+            issueConfiguration
+        })
+    }, [])
+
     return (
         <Tab label="Issue Configuration">
             <SectionMessage title="About">
@@ -16,27 +58,30 @@ export default function IssueConfiguration() {
             <Heading size="large">
                 {"Standard configurations"}
             </Heading>
-            <Form>
+            <Text>
+                We use <Link href="https://day.js.org/docs/en/display/format" openNewTab={true}>DayJS</Link> for formatting the time and date.
+            </Text>
+            <Form onSubmit={submitForm}>
                 <TextField
                     label="Timezone"
                     name="timezone"
                     isRequired
                     type="text"
-                    defaultValue="Europe/Berlin"
+                    defaultValue={issueConfiguration.timezone}
                 />
                 <TextField
                     label="Hour format"
                     name="hourFormat"
                     isRequired
                     type="text"
-                    defaultValue="HH:mm:ss"
+                    defaultValue={issueConfiguration.hourFormat}
                 />
                 <TextField
                     label="Date format"
                     name="dateFormat"
                     isRequired
                     type="text"
-                    defaultValue="DD:MM:YYYY"
+                    defaultValue={issueConfiguration.dateFormat}
                 />
                 <TextField
                     label="Sipgate Number"
@@ -44,6 +89,7 @@ export default function IssueConfiguration() {
                     isRequired
                     type="text"
                     description={`Your sipgater number without the last digit.\nExample: "492111234567" where the last digit "7" is representing the sipgate line, that was called.`}
+                    defaultValue={issueConfiguration.sipgateNumber}
                 />
             </Form>
             <Heading size="large">
@@ -68,40 +114,46 @@ export default function IssueConfiguration() {
             <Heading size="large">
                 {"Configuriable fields"}
             </Heading>
-            <Form>
+            <Form onSubmit={submitForm}>
                 <TextArea
                     label="{{$spamRatingField}}"
                     name="spamRatingField"
                     isRequired
                     description={`This field specifies the spam rating for the number.`}
+                    defaultValue={issueConfiguration.spamRatingField}
                 />
                 <TextArea
                     label="{{$cityField}}"
                     name="cityField"
                     isRequired
                     description={`This field specifies the caller's city for the ticket.`}
+                    defaultValue={issueConfiguration.cityField}
                 />
                 <TextArea
                     label="{{$timeField}}"
                     name="timeField"
                     isRequired
                     description={`This field specifies what ending will come after the time.`}
+                    defaultValue={issueConfiguration.timeField}
                 />
             </Form>
-            <Form>
+            <Form onSubmit={submitForm}>
                 <TextArea
                     label="{{$summary}}"
                     name="summary"
                     isRequired
                     description={`The issue summary.`}
+                    defaultValue={issueConfiguration.summary}
                 />
                 <TextArea
                     label="{{$description}}"
                     name="description"
                     isRequired
                     description={`The issue description.`}
+                    defaultValue={issueConfiguration.description}
                 />
             </Form>
+            <Code text={JSON.stringify(debug, null, 4)} language="json" />
         </Tab>
     )
 }
