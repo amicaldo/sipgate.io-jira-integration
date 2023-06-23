@@ -1,0 +1,80 @@
+import { storage } from "@forge/api";
+import ForgeUI, { useEffect, useState, Code, Form, SectionMessage, Tab, Text, TextField, Toggle } from "@forge/ui";
+
+export default function JQLConfiguration() {
+    const [debug, setDebug] = useState({})
+    const [jql, setJQL] = useState({})
+    const submitForm = async formData => {
+        const queriesLength = jql.queries.length
+        var queries = jql.queries
+
+        if (queriesLength > formData.jqlQueriesAmount) {
+            for (let i = 0; i < queriesLength - formData.jqlQueriesAmount; i++) {
+                queries.pop()
+            }
+        }
+
+        if (queriesLength < formData.jqlQueriesAmount) {
+            for (let i = 0; i < formData.jqlQueriesAmount - queriesLength; i++) {
+                queries.push("")
+            }
+        }
+
+        setJQL({
+            enabled: formData.jqlEnable ? true : false,
+            queriesAmount: formData.jqlQueriesAmount,
+            queries
+        })
+
+        await storage.set("jql", {
+            enabled: formData.jqlEnable ? true : false,
+            queriesAmount: formData.jqlQueriesAmount,
+            queries
+        })
+
+        setDebug({
+            jql: {
+                enabled: formData.jqlEnable ? true : false,
+                queriesAmount: formData.jqlQueriesAmount,
+                queries
+            },
+            formData
+        })
+    }
+
+    useEffect(async () => {
+        const jqlRaw = await storage.get("jql")
+
+        setJQL(jqlRaw ? jqlRaw : {
+            enabled: false,
+            queriesAmount: 0,
+            queries: []
+        })
+
+        setDebug({
+            jqlRaw
+        })
+    }, [])
+
+    return (
+        <Tab label="JQL Configuration">
+            <SectionMessage>
+                <Text>
+                    {"Text"}
+                </Text>
+            </SectionMessage>
+            <Form onSubmit={submitForm}>
+                <Toggle label="Enable JQL" name="jqlEnable" defaultChecked={jql.enabled} />
+                <TextField isRequired type="number" label="JQL Queries" name="jqlQueriesAmount" defaultValue={jql.queriesAmount} />
+            </Form>
+            {jql?.queries && jql.queries.length > 0 (
+                <Form>
+                    {jql.queries.map((query, index) => {
+                        <TextField name={`query_${index}`} label={`JQL Query ${`${index}`.padStart(2, "0")}`} defaultValue={query} />
+                    })}
+                </Form>
+            )}
+            <Code text={JSON.stringify(debug, null, 4)} language="json" />
+        </Tab>
+    )
+}

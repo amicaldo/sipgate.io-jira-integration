@@ -9,11 +9,9 @@ export default function IssueConfiguration() {
             ...issueConfiguration,
             ...formData
         })
+
         setDebug({
-            issueConfiguration: {
-                ...issueConfiguration,
-                ...formData,
-            },
+            issueConfiguration,
             formData
         })
 
@@ -24,21 +22,22 @@ export default function IssueConfiguration() {
     }
 
     useEffect(async () => {
-        const issueConfiguration = await storage.get("issueConfiguration")
+        const issueConfigurationRaw = await storage.get("issueConfiguration")
 
         setIssueConfiguration({
-            timezone: issueConfiguration?.timezone ? issueConfiguration.timezone : "Europe/Berlin",
-            hourFormat: issueConfiguration?.hourFormat ? issueConfiguration.hourFormat : "HH:mm:ss",
-            dateFormat: issueConfiguration?.dateFormat ? issueConfiguration.dateFormat : "DD.MM.YYY",
-            sipgateNumber: issueConfiguration?.sipgateNumber ? issueConfiguration.sipgateNumber : "",
-            spamRatingField: issueConfiguration?.spamRatingField ? issueConfiguration.spamRatingField : " (Rate: {{$rating}})",
-            cityField: issueConfiguration?.cityField ? issueConfiguration.cityField : " aus {{$city}}",
-            timeField: issueConfiguration?.timeField ? issueConfiguration.timeField : "{{$time}} Uhr",
-            summary: issueConfiguration?.summary ? issueConfiguration.summary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$time}} Uhr",
-            description: issueConfiguration?.description ? issueConfiguration.description : ""
+            timezone: issueConfigurationRaw?.timezone ? issueConfigurationRaw.timezone : "Europe/Berlin",
+            hourFormat: issueConfigurationRaw?.hourFormat ? issueConfigurationRaw.hourFormat : "HH:mm:ss",
+            dateFormat: issueConfigurationRaw?.dateFormat ? issueConfigurationRaw.dateFormat : "DD.MM.YYY",
+            sipgateNumber: issueConfigurationRaw?.sipgateNumber ? issueConfigurationRaw.sipgateNumber : "",
+            spamRatingField: issueConfigurationRaw?.spamRatingField ? issueConfigurationRaw.spamRatingField : " (Rate: {{$rating}})",
+            cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " aus {{$city}}",
+            timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}} Uhr",
+            summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
+            description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : ""
         })
 
         setDebug({
+            issueConfigurationRaw,
             issueConfiguration
         })
     }, [])
@@ -139,16 +138,15 @@ export default function IssueConfiguration() {
             </Form>
             <Form onSubmit={submitForm}>
                 <TextArea
-                    label="{{$summary}}"
+                    label="Summary"
                     name="summary"
                     isRequired
                     description={`The issue summary.`}
                     defaultValue={issueConfiguration.summary}
                 />
                 <TextArea
-                    label="{{$description}}"
+                    label="Description"
                     name="description"
-                    isRequired
                     description={`The issue description.`}
                     defaultValue={issueConfiguration.description}
                 />
