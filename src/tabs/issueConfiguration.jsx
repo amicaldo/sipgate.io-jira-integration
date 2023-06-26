@@ -32,7 +32,7 @@ export default function IssueConfiguration() {
             spamRatingField: issueConfigurationRaw?.spamRatingField ? issueConfigurationRaw.spamRatingField : " (Rate: {{$rating}})",
             cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " aus {{$city}}",
             timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}} Uhr",
-            summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$numberOrName}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
+            summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$number}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
             description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : ""
         })
 
@@ -103,8 +103,12 @@ export default function IssueConfiguration() {
                 {"This variable will be replaced with the date of the action, formated in the configured way."}
             </Text>
             <Text>
-                <Strong>{"{{$time}}: "}</Strong>
-                {"This variable will be replaced with the time of the action, formated in the configured way."}
+                <Strong>{"{{$rating}}: "}</Strong>
+                {"This variable will be replaced with the rating from tellows."}
+            </Text>
+            <Text>
+                <Strong>{"{{$city}}: "}</Strong>
+                {"This variable will be replaced with the city of the caller, provided by tellows."}
             </Text>
             <Text>
                 <Strong>{"{{$sipgateNumber}}: "}</Strong>
