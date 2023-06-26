@@ -1,5 +1,5 @@
 import { storage } from "@forge/api";
-import ForgeUI, { useEffect, useState, Code, Form, SectionMessage, Tab, Text, TextField, Toggle } from "@forge/ui";
+import ForgeUI, { useEffect, useState, Code, Form, Fragment, SectionMessage, Tab, Text, TextField, Toggle } from "@forge/ui";
 
 export default function JQLConfiguration() {
     const [debug, setDebug] = useState({})
@@ -16,7 +16,7 @@ export default function JQLConfiguration() {
 
         if (queriesLength < formData.jqlQueriesAmount) {
             for (let i = 0; i < formData.jqlQueriesAmount - queriesLength; i++) {
-                queries.push("")
+                queries.push({ query: "", variable: "" })
             }
         }
 
@@ -38,6 +38,23 @@ export default function JQLConfiguration() {
                 queriesAmount: formData.jqlQueriesAmount,
                 queries
             },
+            formData
+        })
+    }
+    const submitJQL = async formData => {
+        var queries = []
+
+        for (let i = 0; i < jql.queriesAmount; i++) {
+            queries.push({ query: formData[`query_${i}`], variable: formData[`variable_${i}`]})
+        }
+
+        setJQL({
+            ...jql,
+            queries
+        })
+
+        setDebug({
+            queries,
             formData
         })
     }
@@ -67,11 +84,14 @@ export default function JQLConfiguration() {
                 <Toggle label="Enable JQL" name="jqlEnable" defaultChecked={jql.enabled} />
                 <TextField isRequired type="number" label="JQL Queries" name="jqlQueriesAmount" defaultValue={jql.queriesAmount} />
             </Form>
-            {jql?.queries && jql.queries.length > 0 (
-                <Form>
-                    {jql.queries.map((query, index) => {
-                        <TextField name={`query_${index}`} label={`JQL Query ${`${index}`.padStart(2, "0")}`} defaultValue={query} />
-                    })}
+            {jql?.queries && jql.queries.length > 0 && (
+                <Form onSubmit={submitJQL}>
+                    {jql.queries.map(({ query, variable }, index) => (
+                        <Fragment>
+                            <TextField name={`query_${index}`} label={`JQL Query ${`${index + 1}`.padStart(2, "0")}`} defaultValue={query} />
+                            <TextField name={`variable_${index}`} label={`JQL Variable ${`${index + 1}`.padStart(2, "0")}`} defaultValue={variable} />
+                        </Fragment>
+                    ))}
                 </Form>
             )}
             <Code text={JSON.stringify(debug, null, 4)} language="json" />
