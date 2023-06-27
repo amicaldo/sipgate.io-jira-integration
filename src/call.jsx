@@ -20,20 +20,27 @@ function getBodyData(body) {
 export async function SipgateCall(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
     const debug = await storage.get("debugOption")
-    const debugLog = debug ? await storage.get("debugLog") : null
-    const dateData = dayjs().tz(issueConfiguration.timeZone)
+    const debugOption = debug.debugOption
+    const debugLog = debug.debugLog
+    const dateData = dayjs().tz(issueConfiguration.timezone)
     const time = dateData.format(issueConfiguration.hourFormat)
+    const timeField = issueConfiguration.timeField.replace("{{$time}}", time)
 
     try {
         const body = getBodyData(req.body)
         const queryParameters = req.queryParameters
+        const callLogConfiguration = await storage.get("callLogConfiguration")
 
-        if (debug) {
-            debugLog.push(`${time} Uhr: SipgateCall Func -> ${body.diversion ? "Redirection Call" : "Creating Issue"}`)
-            debugLog.push(`${time} Uhr: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
-            debugLog.push(`${time} Uhr: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
+        if (debugOption) {
+            debugLog.push(`${timeField}: SipgateCall Func -> ${body.diversion ? "Redirection Call" : "Creating Issue"}`)
+            debugLog.push(`${timeField}: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+            debugLog.push(`${timeField}: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
 
-            await storage.set("debugLog", debugLog)
+            console.log(`${timeField}: SipgateCall Func -> ${body.diversion ? "Redirection Call" : "Creating Issue"}`)
+            console.log(`${timeField}: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+            console.log(`${timeField}: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
+
+            await storage.set("debug", { debugOption, debugLog })
         }
 
         if (body.to?.length > 3) {
@@ -43,12 +50,21 @@ export async function SipgateCall(req) {
                 const data = await storage.get(body.xcid)
 
                 if (body.diversion && data) {
+                    const callDuration = dateData.diff(dayjs(data.date), "s")
                     const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-                    const description = `${issueConfiguration?.redirectedCall ? `\n${issueConfiguration.redirectedCall}` : ""}`
-                        .replace("{{$time}}", time)
+                    const description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`
+                        .replace("{{$timeField}}", issueConfiguration.timeField)
+                        .replace("{{number}}", `#${body.from}`)
+                        .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
+                        .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
+                        .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
+                        .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
                         .replace("{{$sipgateUsername}}", user.replace("+", " "))
+                        .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
+                        .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
+                        .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
-                        const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                         method: "PUT",
                         headers: {
                             "Accept": "application/json",
@@ -75,11 +91,14 @@ export async function SipgateCall(req) {
                         })
                     })
 
-                    if (debug) {
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+                    if (debugOption) {
+                        debugLog.push(`${timeField}: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                        debugLog.push(`${timeField}: SipcateCall Func -> Edited Description: ${data.description}${description}`)
 
-                        await storage.set("debugLog", debugLog)
+                        console.log(`${timeField}: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                        console.log(`${timeField}: SipcateCall Func -> Edited Description: ${data.description}${description}`)
+
+                        await storage.set("debug", { debugOption, debugLog })
                     }
 
                     await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
@@ -87,26 +106,59 @@ export async function SipgateCall(req) {
                 else {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                     const tellows = await tellowsRaw.json()
+                    const jql = await storage.get("jql")
                     var description = issueConfiguration.description
-                    var summary = issueConfiguration.issueSummary
+                    var summary = issueConfiguration.summary
+
+                    if (jql.jqlQueriesAmount > 0) {
+                        jql.queries.forEach(async ({ query, variable }) => {
+                            if (query.length > 0) {
+                                const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${query}`, {
+                                    headers: {
+                                        'Accept': 'application/json'
+                                    }
+                                })
+                                const jqlQuery = await jqlQueryRaw.json()
+
+                                if (jqlQuery) {
+                                    summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                    description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                }
+                            }
+                        })
+                    }
 
                     summary
+                        .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
+                        .replace("{{$cityField}}", issueConfiguration.cityField)
+                        .replace("{{$timeField}}", issueConfiguration.timeField)
                         .replace("{{number}}", `#${body.from}`)
-                        .replace("{{$spamRatingField}}", tellows?.tellows?.score ? `${issueConfiguration.spamRatingField}`.replace("{{$rating}}", tellows.tellows.score) : "")
-                        .replace("{{$cityField}}", tellows?.tellows?.location ? `${issueConfiguration.cityField}`.replace("{{$city}}", tellows.tellows.location) : "")
                         .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
                         .replace("{{$time}}", time)
-
-                    description += `\n${issueConfiguration.incommingCall}`
-                    description
-                        .replace("{{$time}}", time)
+                        .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
+                        .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
                         .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
 
-                    if (debug) {
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Issue Summary: ${summary}`)
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Issue Description: ${description}`)
+                    description += `\n${callLogConfiguration.incommingCall}`
+                    description
+                        .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
+                        .replace("{{$cityField}}", issueConfiguration.cityField)
+                        .replace("{{$timeField}}", issueConfiguration.timeField)
+                        .replace("{{number}}", `#${body.from}`)
+                        .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
+                        .replace("{{$time}}", time)
+                        .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
+                        .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
+                        .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
 
-                        await storage.set("debugLog", debugLog)
+                    if (debugOption) {
+                        debugLog.push(`${timeField}: SipcateCall Func -> Issue Summary: ${summary}`)
+                        debugLog.push(`${timeField}: SipcateCall Func -> Issue Description: ${description}`)
+
+                        console.log(`${timeField}: SipcateCall Func -> Issue Summary: ${summary}`)
+                        console.log(`${timeField}: SipcateCall Func -> Issue Description: ${description}`)
+
+                        await storage.set("debug", { debugOption, debugLog })
                     }
 
                     const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
@@ -146,10 +198,13 @@ export async function SipgateCall(req) {
                     const issue = await issueRaw.json()
 
                     if (debug) {
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
-                        debugLog.push(`${time} Uhr: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
+                        debugLog.push(`${timeField}: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
+                        debugLog.push(`${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
 
-                        await storage.set("debugLog", debugLog)
+                        console.log(`${timeField}: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`)
+                        console.log(`${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issue, null, 4)}`)
+
+                        await storage.set("debug", { debugOption, debugLog })
                     }
 
                     await storage.set(body.xcid, { id: issue.id, description })
@@ -170,10 +225,12 @@ export async function SipgateCall(req) {
         }
 
     } catch (err) {
-        if (debug) {
-            debugLog.push(`${time} Uhr: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
+        if (debugOption) {
+            debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
 
-            await storage.set("debugLog", debugLog)
+            console.error(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
+
+            await storage.set("debug", { debugOption, debugLog })
         }
 
         return {

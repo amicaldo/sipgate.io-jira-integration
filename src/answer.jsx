@@ -20,18 +20,23 @@ function getBodyData(body) {
 export async function SipgateAnswer(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
     const debug = await storage.get("debugOption")
-    const debugLog = debug ? await storage.get("debugLog") : null
+    const debugOption = debug.debugOption
+    const debugLog = debug.debugLog
     const dateData = dayjs().tz(issueConfiguration.timeZone)
     const time = dateData.format(issueConfiguration.hourFormat)
+    const timeField = issueConfiguration.timeField.replace("{{$time}}", time)
 
     try {
         const body = getBodyData(req.body)
 
-        if (debug) {
-            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Answering Call`)
-            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+        if (debugOption) {
+            debugLog.push(`${timeField}: SipgateAnswer Func -> Answering Call`)
+            debugLog.push(`${timeField}: SipgateAnswer Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
 
-            await storage.set("debugLog", debugLog)
+            console.log(`${timeField}: SipgateAnswer Func -> Answering Call`)
+            console.log(`${timeField}: SipgateAnswer Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
+
+            await storage.set("debug", { debugOption, debugLog })
         }
 
         if (body.direction === "in") {
@@ -41,9 +46,19 @@ export async function SipgateAnswer(req) {
             const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
             if (data) {
-                const description = `${issueConfiguration?.answerCall ? `\n${issueConfiguration.answerCall}` : ""}`
-                    .replace("{{$time}}", time)
-                    .replace("{{$sipgateUsername}}", user.replace("+", " "))
+                const callDuration = dateData.diff(dayjs(data.date), "s")
+                const callLogConfiguration = await storage.get("callLogConfiguration")
+                const description = `${callLogConfiguration?.answerCall ? `\n${callLogConfiguration.answerCall}` : ""}`
+                .replace("{{$timeField}}", issueConfiguration.timeField)
+                .replace("{{number}}", `#${body.from}`)
+                .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
+                .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
+                .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
+                .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
+                .replace("{{$sipgateUsername}}", user.replace("+", " "))
+                .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
+                .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
+                .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
                 const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
@@ -72,13 +87,18 @@ export async function SipgateAnswer(req) {
                     })
                 })
 
-                if (debug) {
-                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`)
-                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> User: ${JSON.stringify(user, null, 4)}`)
-                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                    debugLog.push(`${time} Uhr: SipgateAnswer Func -> Edited Description: ${data.description}${description}`)
+                if (debugOption) {
+                    debugLog.push(`${timeField}: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`)
+                    debugLog.push(`${timeField}: SipgateAnswer Func -> User: ${JSON.stringify(user, null, 4)}`)
+                    debugLog.push(`${timeField}: SipgateAnswer Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                    debugLog.push(`${timeField}: SipgateAnswer Func -> Edited Description: ${data.description}${description}`)
 
-                    await storage.set("debugLog", debugLog)
+                    console.log(`${timeField}: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`)
+                    console.log(`${timeField}: SipgateAnswer Func -> User: ${JSON.stringify(user, null, 4)}`)
+                    console.log(`${timeField}: SipgateAnswer Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
+                    console.log(`${timeField}: SipgateAnswer Func -> Edited Description: ${data.description}${description}`)
+
+                    await storage.set("debug", { debugOption, debugLog })
                 }
 
                 await storage.set(body.xcid, { ...data, description: `${data.description}${description}`, date: dateData.toJSON() })
@@ -95,10 +115,12 @@ export async function SipgateAnswer(req) {
                         })
                     })
 
-                    if (debug) {
-                        debugLog.push(`${time} Uhr: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`)
+                    if (debugOption) {
+                        debugLog.push(`${timeField}: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`)
 
-                        await storage.set("debugLog", debugLog)
+                        console.log(`${timeField}: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`)
+
+                        await storage.set("debug", { debugOption, debugLog })
                     }
                 }
             }
@@ -111,10 +133,12 @@ export async function SipgateAnswer(req) {
             }
         }
     } catch (error) {
-        if (debug) {
-            debugLog.push(`${time} Uhr: SipgateAnswer Func -> Error: ${JSON.stringify(error, null, 4)}`)
+        if (debugOption) {
+            debugLog.push(`${timeField}: SipgateAnswer Func -> Error: ${JSON.stringify(error, null, 4)}`)
 
-            await storage.set("debugLog", debugLog)
+            console.log(`${timeField}: SipgateAnswer Func -> Error: ${JSON.stringify(error, null, 4)}`)
+
+            await storage.set("debug", { debugOption, debugLog })
         }
 
         return {
