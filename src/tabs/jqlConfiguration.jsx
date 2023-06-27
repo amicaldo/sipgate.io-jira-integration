@@ -1,8 +1,7 @@
 import { storage } from "@forge/api";
-import ForgeUI, { useEffect, useState, Code, Form, Fragment, SectionMessage, Tab, Text, TextField, Toggle } from "@forge/ui";
+import ForgeUI, { useEffect, useState, Form, Fragment, SectionMessage, Tab, Text, TextField, Toggle } from "@forge/ui";
 
 export default function JQLConfiguration() {
-    const [debug, setDebug] = useState({})
     const [jql, setJQL] = useState({})
     const submitForm = async formData => {
         const queriesLength = jql.queries.length
@@ -31,15 +30,6 @@ export default function JQLConfiguration() {
             queriesAmount: formData.jqlQueriesAmount,
             queries
         })
-
-        setDebug({
-            jql: {
-                enabled: formData.jqlEnable ? true : false,
-                queriesAmount: formData.jqlQueriesAmount,
-                queries
-            },
-            formData
-        })
     }
     const submitJQL = async formData => {
         var queries = []
@@ -52,11 +42,6 @@ export default function JQLConfiguration() {
             ...jql,
             queries
         })
-
-        setDebug({
-            queries,
-            formData
-        })
     }
 
     useEffect(async () => {
@@ -66,10 +51,6 @@ export default function JQLConfiguration() {
             enabled: false,
             queriesAmount: 0,
             queries: []
-        })
-
-        setDebug({
-            jqlRaw
         })
     }, [])
 
@@ -94,7 +75,6 @@ export default function JQLConfiguration() {
                     ))}
                 </Form>
             )}
-            <Code text={JSON.stringify(debug, null, 4)} language="json" />
         </Tab>
     )
 }

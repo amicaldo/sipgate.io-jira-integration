@@ -1,18 +1,12 @@
 import { storage } from "@forge/api"
-import ForgeUI, { useEffect, useState, Code, Form, Heading, Link, SectionMessage, Strong, Tab, Text, TextArea, TextField } from "@forge/ui"
+import ForgeUI, { useEffect, useState, Form, Heading, Link, SectionMessage, Strong, Tab, Text, TextArea, TextField } from "@forge/ui"
 
 export default function IssueConfiguration() {
     const [issueConfiguration, setIssueConfiguration] = useState({})
-    const [debug, setDebug] = useState({})
     const submitForm = async formData => {
         setIssueConfiguration({
             ...issueConfiguration,
             ...formData
-        })
-
-        setDebug({
-            issueConfiguration,
-            formData
         })
 
         await storage.set("issueConfiguration", {
@@ -34,11 +28,6 @@ export default function IssueConfiguration() {
             timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}} Uhr",
             summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$number}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
             description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : ""
-        })
-
-        setDebug({
-            issueConfigurationRaw,
-            issueConfiguration
         })
     }, [])
 
@@ -159,7 +148,6 @@ export default function IssueConfiguration() {
                     defaultValue={issueConfiguration.description}
                 />
             </Form>
-            <Code text={JSON.stringify(debug, null, 4)} language="json" />
         </Tab>
     )
 }

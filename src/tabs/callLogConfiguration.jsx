@@ -1,18 +1,12 @@
 import { storage } from "@forge/api"
-import ForgeUI, { useEffect, useState, Code, Form, Heading, SectionMessage, Strong, Tab, Text, TextArea } from "@forge/ui"
+import ForgeUI, { useEffect, useState, Form, Heading, SectionMessage, Strong, Tab, Text, TextArea } from "@forge/ui"
 
 export default function CallLogConfiguration() {
     const [callLogConfiguration, setCallLogConfiguration] = useState({})
-    const [debug, setDebug] = useState({})
     const submitForm = async formData => {
         setCallLogConfiguration({
             ...callLogConfiguration,
             ...formData
-        })
-
-        setDebug({
-            callLogConfiguration,
-            formData
         })
 
         await storage.set("callLogConfiguration", {
@@ -35,11 +29,6 @@ export default function CallLogConfiguration() {
             congestion: callLogConfigurationRaw?.congestion ? callLogConfigurationRaw.congestion : "{{$timeField}}: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
             notFound: callLogConfigurationRaw?.notFound ? callLogConfigurationRaw.notFound : "{{$timeField}}: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
             callDuration: callLogConfigurationRaw?.callDuration ? callLogConfigurationRaw.callDuration : "Anrufdauer: {{$minutes}}:{{$seconds}} Minuten."
-        })
-
-        setDebug({
-            callLogConfigurationRaw,
-            callLogConfiguration
         })
     }, [])
 
@@ -174,7 +163,6 @@ export default function CallLogConfiguration() {
                     defaultValue={callLogConfiguration.callDuration}
                 />
             </Form>
-            <Code text={JSON.stringify(debug, null, 4)} language="json" />
         </Tab>
     )
 }

@@ -1,8 +1,10 @@
 import xml from "xml"
 import dayjs from "dayjs"
+import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
-import api, { fetch, route, storage } from "@forge/api"
+import api, { fetch, route, storage, webTrigger } from "@forge/api"
 
+dayjs.extend(utc)
 dayjs.extend(timezone)
 
 function getBodyData(body) {
@@ -19,7 +21,7 @@ function getBodyData(body) {
 
 export async function SipgateCall(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
-    const debug = await storage.get("debugOption")
+    const debug = await storage.get("debug")
     const debugOption = debug.debugOption
     const debugLog = debug.debugLog
     const dateData = dayjs().tz(issueConfiguration.timezone)
@@ -50,11 +52,13 @@ export async function SipgateCall(req) {
                 const data = await storage.get(body.xcid)
 
                 if (body.diversion && data) {
+                    console("61")
+
                     const callDuration = dateData.diff(dayjs(data.date), "s")
                     const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
                     const description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`
                         .replace("{{$timeField}}", issueConfiguration.timeField)
-                        .replace("{{number}}", `#${body.from}`)
+                        .replace("{{$number}}", `#${body.from}`)
                         .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
                         .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
                         .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
@@ -62,6 +66,7 @@ export async function SipgateCall(req) {
                         .replace("{{$sipgateUsername}}", user.replace("+", " "))
                         .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
                         .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
+                        .replace("{{$time}}", time)
                         .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
                     const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
@@ -107,8 +112,8 @@ export async function SipgateCall(req) {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
                     const tellows = await tellowsRaw.json()
                     const jql = await storage.get("jql")
-                    var description = issueConfiguration.description
                     var summary = issueConfiguration.summary
+                    var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
                     if (jql.jqlQueriesAmount > 0) {
                         jql.queries.forEach(async ({ query, variable }) => {
@@ -121,30 +126,31 @@ export async function SipgateCall(req) {
                                 const jqlQuery = await jqlQueryRaw.json()
 
                                 if (jqlQuery) {
-                                    summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
-                                    description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                    summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                    description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
                                 }
                             }
                         })
                     }
 
-                    summary
+                    console.log(issueConfiguration)
+
+                    summary = summary
                         .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
                         .replace("{{$cityField}}", issueConfiguration.cityField)
                         .replace("{{$timeField}}", issueConfiguration.timeField)
-                        .replace("{{number}}", `#${body.from}`)
+                        .replace("{{$number}}", `#${body.from}`)
                         .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
                         .replace("{{$time}}", time)
                         .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
                         .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
                         .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
 
-                    description += `\n${callLogConfiguration.incommingCall}`
-                    description
+                    description = description
                         .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
                         .replace("{{$cityField}}", issueConfiguration.cityField)
                         .replace("{{$timeField}}", issueConfiguration.timeField)
-                        .replace("{{number}}", `#${body.from}`)
+                        .replace("{{$number}}", `#${body.from}`)
                         .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
                         .replace("{{$time}}", time)
                         .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")

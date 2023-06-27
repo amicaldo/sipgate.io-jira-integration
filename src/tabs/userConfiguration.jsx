@@ -1,5 +1,5 @@
 import api, { route, startsWith, storage } from "@forge/api"
-import ForgeUI, { useEffect, useState, Cell, Code, Form, Head, Heading, SectionMessage, Row, Strong, Table, Tab, Text, TextField, User } from "@forge/ui"
+import ForgeUI, { useEffect, useState, Cell, Form, Head, Heading, SectionMessage, Row, Strong, Table, Tab, Text, TextField, User } from "@forge/ui"
 
 async function getJiraUsers() {
     var startAt = 0
@@ -62,11 +62,6 @@ export default function UserConfiguration() {
         })
 
         setUsers(usersArr)
-        setDebug({
-            jiraUsers,
-            sipgateUsers,
-            usersArr
-        })
     }, [])
 
     return (
@@ -102,7 +97,6 @@ export default function UserConfiguration() {
                     </Table>
                 </Form>
             )}
-            <Code text={JSON.stringify(debug, null, 4)} language="json" />
         </Tab>
     )
 }

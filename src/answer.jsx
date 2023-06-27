@@ -1,7 +1,9 @@
 import dayjs from "dayjs"
+import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
 import api, { route, storage } from "@forge/api"
 
+dayjs.extend(utc)
 dayjs.extend(timezone)
 
 function getBodyData(body) {
@@ -19,10 +21,10 @@ function getBodyData(body) {
 
 export async function SipgateAnswer(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
-    const debug = await storage.get("debugOption")
+    const debug = await storage.get("debug")
     const debugOption = debug.debugOption
     const debugLog = debug.debugLog
-    const dateData = dayjs().tz(issueConfiguration.timeZone)
+    const dateData = dayjs().tz(issueConfiguration.timezone)
     const time = dateData.format(issueConfiguration.hourFormat)
     const timeField = issueConfiguration.timeField.replace("{{$time}}", time)
 
@@ -49,16 +51,15 @@ export async function SipgateAnswer(req) {
                 const callDuration = dateData.diff(dayjs(data.date), "s")
                 const callLogConfiguration = await storage.get("callLogConfiguration")
                 const description = `${callLogConfiguration?.answerCall ? `\n${callLogConfiguration.answerCall}` : ""}`
-                .replace("{{$timeField}}", issueConfiguration.timeField)
-                .replace("{{number}}", `#${body.from}`)
-                .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
-                .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
-                .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
-                .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
-                .replace("{{$sipgateUsername}}", user.replace("+", " "))
-                .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
-                .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
-                .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
+                    .replace("{{$timeField}}", issueConfiguration.timeField)
+                    .replace("{{$number}}", `#${body.from}`)
+                    .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
+                    .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
+                    .replace("{{$sipgateUsername}}", user.replace("+", " "))
+                    .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
+                    .replace("{{$time}}", time)
+                    .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
+                    .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
                 const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                     method: "PUT",
