@@ -2,21 +2,11 @@ import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
 import api, { route, storage } from "@forge/api"
+import getBodyData from "./lib/getBodyData"
+import debugLogging from "./lib/debugLogging"
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
-
-function getBodyData(body) {
-    let obj = {}
-
-    body.split("&").forEach(function (part) {
-        var item = part.split("=")
-
-        obj[item[0]] = decodeURIComponent(item[1])
-    });
-
-    return obj
-}
 
 
 export async function SipgateHangup(req) {
@@ -33,38 +23,48 @@ export async function SipgateHangup(req) {
         const queryParameters = req.queryParameters
         const cause = body.cause
 
-        if (debugOption) {
-            debugLog.push(`${timeField}: SipgateHangup Func -> Ending Call`)
-            debugLog.push(`${timeField}: SipgateHangup Func -> Cause: ${cause}`)
-            debugLog.push(`${timeField}: SipgateHangup Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
-            debugLog.push(`${timeField}: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
-
-            console.log(`${timeField}: SipgateHangup Func -> Ending Call`)
-            console.log(`${timeField}: SipgateHangup Func -> Cause: ${cause}`)
-            console.log(`${timeField}: SipgateHangup Func -> Body Data: ${JSON.stringify(body, null, 4)}`)
-            console.log(`${timeField}: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`)
-
-            await storage.set("debug", { debugOption, debugLog })
-        }
+        debugLogging(debugOption, debugLog, [
+            `${timeField}: SipgateHangup Func -> Ending Call`,
+            `${timeField}: SipgateHangup Func -> Cause: ${cause}`,
+            `${timeField}: SipgateHangup Func -> Body Data: ${JSON.stringify(body, null, 4)}`,
+            `${timeField}: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`
+        ])
 
         if (body.direction === "in") {
             const data = await storage.get(body.xcid)
             const callLogConfiguration = await storage.get("callLogConfiguration")
             let description
 
-            console.log("55")
-
             if (data) {
                 const callDuration = dateData.diff(dayjs(data.date), "s")
                 const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
                 const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
 
-                console.log("60")
-
                 if (cause === "normalClearing") {
-                    console.log("63")
-
                     description = `${callLogConfiguration?.normalClearing ? `\n${callLogConfiguration.normalClearing}` : ""}${callLogConfiguration?.callDuration ? `\n\n${callLogConfiguration.callDuration}` : ""}`
+
+                    if (queryParameters.closeID && !body.diversion) {
+                        const resTrans = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
+                            method: "POST",
+                            headers: {
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ transition: { "id": queryParameters.closeID[0] } })
+                        })
+
+                        debugLogging(debugOption, debugLog, [
+                            `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`,
+                            `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`
+                        ])
+                    }
+                }
+                else if (cause !== "forwarded") {
+                    description = `${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}`
+                }
+
+                if (description) {
+                    description = description
                         .replace("{{$timeField}}", issueConfiguration.timeField)
                         .replace("{{$number}}", `#${body.from}`)
                         .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
@@ -75,43 +75,6 @@ export async function SipgateHangup(req) {
                         .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
                         .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
-                    console.log("76")
-
-                    if (queryParameters.closeID && !body.diversion) {
-                        const resTrans = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}/transitions`, {
-                            method: "POST",
-                            headers: {
-                                "Accept": "application/json",
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                transition: { "id": queryParameters.closeID[0] }
-                            })
-                        })
-
-                        if (debugOption) {
-                            debugLog.push(`${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`)
-
-                            console.log(`${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`)
-
-                            await storage.set("debug", { debugOption, debugLog })
-                        }
-                    }
-                }
-                else if (cause !== "forwarded") {
-                    description = `${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}`
-                        .replace("{{$timeField}}", issueConfiguration.timeField)
-                        .replace("{{number}}", `#${body.from}`)
-                        .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
-                        .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
-                        .replace("{{$sipgateUsername}}", user.replace("+", " "))
-                        .replace("{{$sipgatePassword}}", userID)
-                        .replace("{{$time}}", time)
-                        .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
-                        .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
-                }
-
-                if (description) {
                     const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
                         method: "PUT",
                         headers: {
@@ -121,17 +84,13 @@ export async function SipgateHangup(req) {
                         body: JSON.stringify({
                             fields: {
                                 description: {
-                                    content: [
-                                        {
-                                            content: [
-                                                {
-                                                    text: `${data.description}${description}`,
-                                                    type: "text"
-                                                }
-                                            ],
-                                            type: "paragraph"
-                                        }
-                                    ],
+                                    content: [{
+                                        content: [{
+                                            text: `${data.description}${description}`,
+                                            type: "text"
+                                        }],
+                                        type: "paragraph"
+                                    }],
                                     type: "doc",
                                     version: 1
                                 }
@@ -139,24 +98,15 @@ export async function SipgateHangup(req) {
                         })
                     })
 
-                    if (debugOption) {
-                        debugLog.push(`${timeField}: SipgateHangup Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                        debugLog.push(`${timeField}: SipgateHangup Func -> Edited Description: ${data.description}${description}`)
-
-                        console.log(`${timeField}: SipgateHangup Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`)
-                        console.log(`${timeField}: SipgateHangup Func -> Edited Description: ${data.description}${description}`)
-
-                        await storage.set("debug", { debugOption, debugLog })
-                    }
+                    debugLogging(debugOption, debugLog, [
+                        `${timeField}: SipgateHangup Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`,
+                        `${timeField}: SipgateHangup Func -> Edited Description: ${data.description}${description}`
+                    ])
 
                     if (cause == "normalClearing") {
-                        if (debugOption) {
-                            debugLog.push(`${timeField}: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`)
-
-                            console.log(`${timeField}: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`)
-
-                            await storage.set("debug", { debugOption, debugLog })
-                        }
+                        debugLogging(debugOption, debugLog, [
+                            `${timeField}: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`
+                        ])
 
                         await storage.delete(body.xcid)
                     }
@@ -177,7 +127,7 @@ export async function SipgateHangup(req) {
         if (debugOption) {
             debugLog.push(`${timeField}: SipgateHangup Func -> Error: ${JSON.stringify(error, null, 4)}`)
 
-            console.log(`${timeField}: SipgateHangup Func -> Error: ${JSON.stringify(error, null, 4)}`)
+            console.error(`${timeField}: SipgateHangup Func -> Error: ${JSON.stringify(error, null, 4)}`)
 
             await storage.set("debug", { debugOption, debugLog })
         }
