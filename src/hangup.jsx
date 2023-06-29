@@ -54,7 +54,6 @@ export async function SipgateHangup(req) {
                         })
 
                         debugLogging(debugOption, debugLog, [
-                            `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`,
                             `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`
                         ])
                     }

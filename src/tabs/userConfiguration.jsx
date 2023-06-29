@@ -43,22 +43,37 @@ async function getSipgateUsers() {
 
 export default function UserConfiguration() {
     const [users, setUsers] = useState([])
-    const [debug, setDebug] = useState({})
+    const formSubmit = async formData => {
+        let usersCopy = [...users]
+
+        for (const [atlassianID, sipgateID] of Object.entries(formData)) {
+            if (sipgateID.length > 0) {
+                const dataIndex = usersCopy.findIndex(user => user.accountID === atlassianID)
+
+                if (dataIndex !== -1) {
+                    if (usersCopy[dataIndex].sipgateID !== sipgateID) {
+                        await storage.delete(`sipgate_id_${usersCopy[dataIndex].sipgateID}`)
+                    }
+
+                    usersCopy[dataIndex] = {...usersCopy[dataIndex], sipgateID}
+
+                    await storage.set(`sipgate_id_${sipgateID}`, atlassianID)
+                }
+            }
+        }
+
+        setUsers(usersCopy)
+    }
 
     useEffect(async () => {
         const jiraUsers = await getJiraUsers()
         const sipgateUsers = await getSipgateUsers()
         var usersArr = []
 
-        sipgateUsers.forEach(async ({key: sipgateID, value: accountID}) => {
-            const jiraFind = jiraUsers.find(user => user.accountId === accountID)
+        jiraUsers.forEach(({accountId}) => {
+            const sipgateFind = sipgateUsers.find(sipgateUser => sipgateUser.value === accountId)
 
-            if (jiraFind) {
-                usersArr.push({accountID: jiraFind.accountId, sipgateID: sipgateID.replace("sipgate_id_", "")})
-            }
-            else {
-                await storage.delete(sipgateID)
-            }
+            usersArr.push({accountID: accountId, sipgateID: sipgateFind ? sipgateFind.key.replace("sipgate_id_", "") : ""})
         })
 
         setUsers(usersArr)
@@ -74,7 +89,7 @@ export default function UserConfiguration() {
                 </Text>
             </SectionMessage>
             {users.length > 0 && (
-                <Form>
+                <Form onSubmit={formSubmit}>
                     <Table>
                         <Head>
                             <Cell>

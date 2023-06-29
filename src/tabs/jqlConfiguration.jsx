@@ -4,8 +4,8 @@ import ForgeUI, { useEffect, useState, Form, Fragment, SectionMessage, Tab, Text
 export default function JQLConfiguration() {
     const [jql, setJQL] = useState({})
     const submitForm = async formData => {
-        const queriesLength = jql.queries.length
-        var queries = jql.queries
+        var queries = [...jql.queries]
+        const queriesLength = queries.length
 
         if (queriesLength > formData.jqlQueriesAmount) {
             for (let i = 0; i < queriesLength - formData.jqlQueriesAmount; i++) {
@@ -32,6 +32,7 @@ export default function JQLConfiguration() {
         })
     }
     const submitJQL = async formData => {
+        const jqlCopy = { ...jql }
         var queries = []
 
         for (let i = 0; i < jql.queriesAmount; i++) {
@@ -39,7 +40,12 @@ export default function JQLConfiguration() {
         }
 
         setJQL({
-            ...jql,
+            ...jqlCopy,
+            queries
+        })
+
+        await storage.set("jql", {
+            ...jqlCopy,
             queries
         })
     }

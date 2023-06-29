@@ -88,20 +88,30 @@ export async function SipgateCall(req) {
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
-                    if (jql.jqlQueriesAmount > 0) {
+                    if (jql.queriesAmount > 0) {
                         jql.queries.forEach(async ({ query, variable }) => {
                             if (query.length > 0) {
-                                const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${query}`, {
+                                const jqlQueryString = query
+                                    .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
+                                    .replace("{{$cityField}}", issueConfiguration.cityField)
+                                    .replace("{{$timeField}}", issueConfiguration.timeField)
+                                    .replace("{{$number}}", `\\u002b${body.from}`)
+                                    .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
+                                    .replace("{{$time}}", time)
+                                    .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
+                                    .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
+                                    .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
+
+                                const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
                                     headers: {
-                                        'Accept': 'application/json'
+                                        "Accept": "application/json"
                                     }
                                 })
+
                                 const jqlQuery = await jqlQueryRaw.json()
 
-                                if (jqlQuery) {
-                                    summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
-                                    description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
-                                }
+                                summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
                             }
                         })
                     }
