@@ -72,6 +72,36 @@ function replaceVariables(textValue, replacements) {
     return result;
 }
 
+let jql;
+let jqlQueryCache;
+async function replaceJQLVariables(stringToReplace, replacements) {
+    if (!jql){
+        jql = await storage.get("jql");
+    }
+
+    if (jql.queriesAmount > 0) {
+        for await (let { query, variable, defaultValue } of jql.queries) {
+            if (query.length > 0) {
+                const jqlQueryString = replaceVariables(query, replacements);
+
+                if (!jqlQueryCache[jqlQueryString]){
+                    const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    });
+                    jqlQueryCache[jqlQueryString] = await jqlQueryRaw.json();
+                }
+
+                defaultValue = replaceVariables(defaultValue, replacements);
+
+                stringToReplace = stringToReplace.replace(variable, jqlQueryCache[jqlQueryString]?.issues?.[0]?.fields?.summary ? jqlQueryCache[jqlQueryString].issues[0].fields.summary : defaultValue);
+            }
+        }
+    }
+    return stringToReplace;
+}
+
 export async function SipgateCall(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
     const debug = await storage.get("debug")
@@ -109,9 +139,6 @@ export async function SipgateCall(req) {
                 const callInfoFromStorage = await storage.get(body.xcid)
 
                 if (body.diversion && callInfoFromStorage) {
-                    const callDuration = callStartedDate.diff(dayjs(callInfoFromStorage.date), "s")
-                    const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-
                     const replacements = createReplacementMapping({
                         issueConfiguration,
                         body,
@@ -152,8 +179,7 @@ export async function SipgateCall(req) {
                     ])
 
                     await storage.set(body.xcid, { ...callInfoFromStorage, description: description })
-                } else {
-                    const jql = await storage.get("jql")
+                } else { //new incomming call
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
@@ -165,24 +191,8 @@ export async function SipgateCall(req) {
                         tellows
                     });
 
-                    if (jql.queriesAmount > 0) {
-                        for await (const { query, variable } of jql.queries) {
-                            if (query.length > 0) {
-                                const jqlQueryString = replaceVariables(query, replacements);
-
-                                const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
-                                    headers: {
-                                        "Accept": "application/json"
-                                    }
-                                });
-
-                                const jqlQuery = await jqlQueryRaw.json();
-
-                                summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "");
-                                description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "");
-                            }
-                        }
-                    }
+                    summary = await replaceJQLVariables(summary, replacements);
+                    description = await replaceJQLVariables(description, replacements);
 
                     summary = replaceVariables(summary, replacements);
                     description = replaceVariables(description, replacements);
