@@ -21,7 +21,7 @@ export default function IssueConfiguration() {
         setIssueConfiguration({
             timezone: issueConfigurationRaw?.timezone ? issueConfigurationRaw.timezone : "Europe/Berlin",
             hourFormat: issueConfigurationRaw?.hourFormat ? issueConfigurationRaw.hourFormat : "HH:mm:ss",
-            dateFormat: issueConfigurationRaw?.dateFormat ? issueConfigurationRaw.dateFormat : "DD.MM.YYY",
+            dateFormat: issueConfigurationRaw?.dateFormat ? issueConfigurationRaw.dateFormat : "DD.MM.YYYY",
             sipgateNumber: issueConfigurationRaw?.sipgateNumber ? issueConfigurationRaw.sipgateNumber : "",
             spamRatingField: issueConfigurationRaw?.spamRatingField ? issueConfigurationRaw.spamRatingField : " (Rate: {{$rating}})",
             cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " aus {{$city}}",
@@ -79,38 +79,36 @@ export default function IssueConfiguration() {
                     description={`Your sipgater number without the last digit.\nExample: "492111234567" where the last digit "7" is representing the sipgate line, that was called.`}
                     defaultValue={issueConfiguration.sipgateNumber}
                 />
-            </Form>
-            <Heading size="large">
-                {"None configuriable fields"}
-            </Heading>
-            <Text>
-                <Strong>{"{{$number}}: "}</Strong>
-                {"This variable will be replaced with the calling number."}
-            </Text>
-            <Text>
-                <Strong>{"{{$date}}: "}</Strong>
-                {"This variable will be replaced with the date of the action, formated in the configured way."}
-            </Text>
-            <Text>
-                <Strong>{"{{$time}}: "}</Strong>
-                {"This variable will be replaced with the time of the action, formated in the configured way."}
-            </Text>
-            <Text>
-                <Strong>{"{{$rating}}: "}</Strong>
-                {"This variable will be replaced with the rating from tellows."}
-            </Text>
-            <Text>
-                <Strong>{"{{$city}}: "}</Strong>
-                {"This variable will be replaced with the city of the caller, provided by tellows."}
-            </Text>
-            <Text>
-                <Strong>{"{{$sipgateNumber}}: "}</Strong>
-                {"This variable will be replaced with the called number, but only the last digit, based on configuration."}
-            </Text>
-            <Heading size="large">
-                {"Configuriable fields"}
-            </Heading>
-            <Form onSubmit={submitForm}>
+                <Heading size="large">
+                    {"None configuriable fields"}
+                </Heading>
+                <Text>
+                    <Strong>{"{{$number}}: "}</Strong>
+                    This variable will be replaced with the calling number. The number will be formated in the <Strong>ISO-3224</Strong> format.
+                </Text>
+                <Text>
+                    <Strong>{"{{$date}}: "}</Strong>
+                    {"This variable will be replaced with the date of the action, formated in the configured way."}
+                </Text>
+                <Text>
+                    <Strong>{"{{$time}}: "}</Strong>
+                    {"This variable will be replaced with the time of the action, formated in the configured way."}
+                </Text>
+                <Text>
+                    <Strong>{"{{$rating}}: "}</Strong>
+                    {"This variable will be replaced with the rating from tellows."}
+                </Text>
+                <Text>
+                    <Strong>{"{{$city}}: "}</Strong>
+                    {"This variable will be replaced with the city of the caller, provided by tellows."}
+                </Text>
+                <Text>
+                    <Strong>{"{{$sipgateNumber}}: "}</Strong>
+                    {"This variable will be replaced with the called number, but only the last digit, based on configuration."}
+                </Text>
+                <Heading size="large">
+                    {"Configuriable fields"}
+                </Heading>
                 <TextArea
                     label="{{$spamRatingField}}"
                     name="spamRatingField"
@@ -132,8 +130,9 @@ export default function IssueConfiguration() {
                     description={`This field specifies what ending will come after the time.`}
                     defaultValue={issueConfiguration.timeField}
                 />
-            </Form>
-            <Form onSubmit={submitForm}>
+                <Heading size="large">
+                    {"Issue configuration"}
+                </Heading>
                 <TextArea
                     label="Summary"
                     name="summary"

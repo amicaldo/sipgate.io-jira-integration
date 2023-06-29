@@ -12,11 +12,11 @@ export const run = render(
             {"Welcome to the configuration UI for your Sipgate + JIRA integration by amicaldo.\nWe will create one ticket for each incomming call.\nHere, you can customize the format of each ticket created for incoming calls."}
         </Text>
         <Tabs>
-            <WebhookGenerator />
             <IssueConfiguration />
             <CallLogConfiguration />
             <UserConfiguration />
             <JQLConfiguration />
+            <WebhookGenerator />
             <DebugLog />
         </Tabs>
     </AdminPage>
