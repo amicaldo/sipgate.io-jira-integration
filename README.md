@@ -41,3 +41,5 @@ To configure the integration, follow these steps:
 3. Map all employees and accounts in Jira to their corresponding accounts in Sipgate.
 
 This application is created and maintained by amicaldo GmbH. If you need further assistance, please contact support at support@amicaldo.de.
+If you do not want to build the application yourself you can use the free version from the atlassian marketplace.
+https://marketplace.atlassian.com/apps/1231419/sipgate-jira-connection
