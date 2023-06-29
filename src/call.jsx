@@ -9,14 +9,79 @@ import debugLogging from "./lib/debugLogging"
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
+function createReplacementMapping({issueConfiguration, body, callActionDate, callInfoFromStorage, tellows}) {
+    const replacements = [];
+
+    if (issueConfiguration) {
+        replacements.push(
+            ["{{$timeField}}", issueConfiguration.timeField],
+            ["{{$spamRatingField}}", issueConfiguration.spamRatingField],
+            ["{{$cityField}}", issueConfiguration.cityField],
+            ["{{$timeField}}", issueConfiguration.timeField]
+        );
+    }
+
+    if (body) {
+        const sipgateUserID = body.userId || body["userId%5B%5D"] || "";
+        const sipgateUserName = body.user || body["user%5B%5D"] || "";
+
+        replacements.push(
+            ["{{$number}}", `\\u002b${body.from}`],
+            ["{{$sipgateUserID}}", sipgateUserID],
+            ["{{$sipgateUsername}}", sipgateUserName.replace("+", " ")]
+        );
+
+        if (issueConfiguration) {
+            replacements.push(["{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, "")]);
+        }
+    }
+
+    if (callActionDate) {
+        if (callInfoFromStorage) {
+            const callDuration = callActionDate.diff(dayjs(callInfoFromStorage.date), "s");
+
+            replacements.push(
+                ["{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0")],
+                ["{{$seconds}}", `${callDuration % 60}`.padStart(2, "0")]
+            );
+        }
+        if (issueConfiguration) {
+            replacements.push(
+                ["{{$date}}", callActionDate.format(issueConfiguration.dateFormat)],
+                ["{{$time}}", callActionDate.format(issueConfiguration.hourFormat)]
+            );
+        }
+    }
+
+    if (tellows) {
+        replacements.push(
+            ["{{$rating}}", tellows?.tellows?.score || ""],
+            ["{{$city}}", tellows?.tellows?.location || ""]
+        );
+    }
+
+    return replacements;
+}
+
+function replaceVariables(textValue, replacements) {
+    let result = textValue;
+
+    for (const [variable, replacement] of replacements) {
+        result = result.replace(new RegExp(variable, 'g'), replacement);
+    }
+    return result;
+}
+
 export async function SipgateCall(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
     const debug = await storage.get("debug")
     const debugOption = debug.debugOption
     const debugLog = debug.debugLog
-    const dateData = dayjs().tz(issueConfiguration.timezone)
-    const time = dateData.format(issueConfiguration.hourFormat)
-    const timeField = issueConfiguration.timeField.replace("{{$time}}", time)
+    const callStartedDate = dayjs().tz(issueConfiguration.timezone)
+    const time = callStartedDate.format(issueConfiguration.hourFormat)
+    const timeField = replaceVariables(issueConfiguration.timeField, [
+        ["{{$time}}", time]
+    ])
 
     try {
         const body = getBodyData(req.body)
@@ -29,29 +94,36 @@ export async function SipgateCall(req) {
             `${timeField}: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`
         ])
 
-        if (body.to?.length > 3) {
-            if (body.direction === "in") {
+        if (body.to?.length > 3) { //ist es ein interner call
+            if (body.direction === "in") { //ist es ein eingehender CALL
+
+                //@todo check if tellow is enabled
+                let tellows;
+                if (true){
+                    const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
+                    tellows = await tellowsRaw.json();
+                }
+
                 const answerURL = await webTrigger.getUrl("sipgateAnswer")
                 const hangupURL = await webTrigger.getUrl("sipgateHangup")
-                const data = await storage.get(body.xcid)
+                const callInfoFromStorage = await storage.get(body.xcid)
 
-                if (body.diversion && data) {
-                    const callDuration = dateData.diff(dayjs(data.date), "s")
+                if (body.diversion && callInfoFromStorage) {
+                    const callDuration = callStartedDate.diff(dayjs(callInfoFromStorage.date), "s")
                     const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-                    const description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`
-                        .replace("{{$timeField}}", issueConfiguration.timeField)
-                        .replace("{{$number}}", `#${body.from}`)
-                        .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
-                        .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
-                        .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
-                        .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
-                        .replace("{{$sipgateUsername}}", user.replace("+", " "))
-                        .replace("{{$sipgatePassword}}", body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : "")
-                        .replace("{{$minutes}}", `${Math.floor(callDuration / 60)}`.padStart(2, "0"))
-                        .replace("{{$time}}", time)
-                        .replace("{{$seconds}}", `${callDuration % 60}`.padStart(2, "0"))
 
-                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${data.id}`, {
+                    const replacements = createReplacementMapping({
+                        issueConfiguration,
+                        body,
+                        callActionDate: callStartedDate,
+                        callInfoFromStorage,
+                        tellows
+                    });
+
+                    let description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`;
+                    description = replaceVariables(`${callInfoFromStorage.description}${description}`, replacements);
+
+                    const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${callInfoFromStorage.id}`, {
                         method: "PUT",
                         headers: {
                             "Accept": "application/json",
@@ -62,7 +134,7 @@ export async function SipgateCall(req) {
                                 description: {
                                     content: [{
                                         content: [{
-                                            text: `${data.description}${description}`,
+                                            text: description,
                                             type: "text"
                                         }],
                                         type: "paragraph"
@@ -76,60 +148,44 @@ export async function SipgateCall(req) {
 
                     debugLogging(debugOption, debugLog, [
                         `${timeField}: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`,
-                        `${timeField}: SipcateCall Func -> Edited Description: ${data.description}${description}`
+                        `${timeField}: SipcateCall Func -> Edited Description: ${description}`
                     ])
 
-                    await storage.set(body.xcid, { ...data, description: `${data.description}${description}` })
-                }
-                else {
-                    const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
-                    const tellows = await tellowsRaw.json()
+                    await storage.set(body.xcid, { ...callInfoFromStorage, description: description })
+                } else {
                     const jql = await storage.get("jql")
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
+                    const replacements = createReplacementMapping({
+                        issueConfiguration,
+                        body,
+                        callActionDate: callStartedDate,
+                        callInfoFromStorage,
+                        tellows
+                    });
+
                     if (jql.queriesAmount > 0) {
-                        jql.queries.forEach(async ({ query, variable }) => {
+                        for await (const { query, variable } of jql.queries) {
                             if (query.length > 0) {
-                                const jqlQueryString = query
-                                    .replace("{{$spamRatingField}}", issueConfiguration.spamRatingField)
-                                    .replace("{{$cityField}}", issueConfiguration.cityField)
-                                    .replace("{{$timeField}}", issueConfiguration.timeField)
-                                    .replace("{{$number}}", `\\u002b${body.from}`)
-                                    .replace("{{$date}}", dateData.format(issueConfiguration.dateFormat))
-                                    .replace("{{$time}}", time)
-                                    .replace("{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : "")
-                                    .replace("{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : "")
-                                    .replace("{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, ""))
+                                const jqlQueryString = replaceVariables(query, replacements);
 
                                 const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
                                     headers: {
                                         "Accept": "application/json"
                                     }
-                                })
+                                });
 
-                                const jqlQuery = await jqlQueryRaw.json()
+                                const jqlQuery = await jqlQueryRaw.json();
 
-                                summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
-                                description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "")
+                                summary = summary.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "");
+                                description = description.replace(variable, jqlQuery?.issues?.[0]?.fields?.summary ? jqlQuery.issues[0].fields.summary : "");
                             }
-                        })
+                        }
                     }
 
-                    [
-                        ["{{$spamRatingField}}", issueConfiguration.spamRatingField],
-                        ["{{$cityField}}", issueConfiguration.cityField],
-                        ["{{$timeField}}", issueConfiguration.timeField],
-                        ["{{$number}}", `+${body.from}`],
-                        ["{{$date}}", dateData.format(issueConfiguration.dateFormat)],
-                        ["{{$time}}", time],
-                        ["{{$rating}}", tellows?.tellows?.score ? tellows.tellows.score : ""],
-                        ["{{$city}}", tellows?.tellows?.location ? tellows.tellows.location : ""],
-                        ["{{$sipgateNumber}}", body.to.replace(issueConfiguration.sipgateNumber, "")],
-                    ].forEach(([variable, replacement]) => {
-                        summary = summary.replace(variable, replacement)
-                        description = description.replace(variable, replacement)
-                    })
+                    summary = replaceVariables(summary, replacements);
+                    description = replaceVariables(description, replacements);
 
                     debugLogging(debugOption, debugLog, [
                         `${timeField}: SipcateCall Func -> Issue Summary: ${summary}`,
@@ -185,7 +241,6 @@ export async function SipgateCall(req) {
                 }
             }
         }
-
     } catch (err) {
         if (debugOption) {
             debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
