@@ -138,15 +138,15 @@ export async function SipgateCall(req) {
                 const hangupURL = await webTrigger.getUrl("sipgateHangup")
                 const callInfoFromStorage = await storage.get(body.xcid)
 
-                if (body.diversion && callInfoFromStorage) {
-                    const replacements = createReplacementMapping({
-                        issueConfiguration,
-                        body,
-                        callActionDate: callStartedDate,
-                        callInfoFromStorage,
-                        tellows
-                    });
+                const replacements = createReplacementMapping({
+                    issueConfiguration,
+                    body,
+                    callActionDate: callStartedDate,
+                    callInfoFromStorage,
+                    tellows
+                });
 
+                if (body.diversion && callInfoFromStorage) { //call is redirected or call is unknown
                     let description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`;
                     description = replaceVariables(`${callInfoFromStorage.description}${description}`, replacements);
 
@@ -182,14 +182,6 @@ export async function SipgateCall(req) {
                 } else { //new incomming call
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
-
-                    const replacements = createReplacementMapping({
-                        issueConfiguration,
-                        body,
-                        callActionDate: callStartedDate,
-                        callInfoFromStorage,
-                        tellows
-                    });
 
                     summary = await replaceJQLVariables(summary, replacements);
                     description = await replaceJQLVariables(description, replacements);
