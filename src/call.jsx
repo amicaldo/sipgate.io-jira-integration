@@ -2,11 +2,11 @@ import xml from "xml"
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
-import api, { fetch, route, storage, webTrigger } from "@forge/api"
+import { fetch, storage, webTrigger } from "@forge/api"
 import getBodyData from "./lib/getBodyData"
-import debugLogging from "./lib/debugLogging"
 import JIRAManager from "./lib/JIRAManager"
 import ReplacementManager from "./lib/ReplacementManager"
+import DebugManager from "./lib/debugManager"
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -14,24 +14,23 @@ dayjs.extend(timezone)
 export async function SipgateCall(req) {
     const issueConfiguration = await storage.get("issueConfiguration")
     const debug = await storage.get("debug")
-    const debugOption = debug.debugOption
-    const debugLog = debug.debugLog
     const callStartedDate = dayjs().tz(issueConfiguration.timezone)
 
-    const jiraManager = new JIRAManager();
-    const replacementManager = new ReplacementManager();
+    const jiraManager = new JIRAManager()
+    const replacementManager = new ReplacementManager()
+    const debugManager = new DebugManager()
 
     const time = callStartedDate.format(issueConfiguration.hourFormat)
     const timeField = ReplacementManager.replaceVariables(issueConfiguration.timeField, [
         ["{{$time}}", time]
-    ]);
+    ])
 
     try {
         const body = getBodyData(req.body)
         const queryParameters = req.queryParameters
         const callLogConfiguration = await storage.get("callLogConfiguration")
 
-        debugLogging(debugOption, debugLog, [
+        debugManager.log(debug, [
             `${timeField}: SipgateCall Func -> ${body.diversion ? "Redirection Call" : "Creating Issue"}`,
             `${timeField}: SipgateCall Func -> Body Data: ${JSON.stringify(body, null, 4)}`,
             `${timeField}: SipgateCall Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`
@@ -39,12 +38,12 @@ export async function SipgateCall(req) {
 
         if (body.to?.length > 3) { //ist es ein interner call
             if (body.direction === "in") { //ist es ein eingehender CALL
-
                 //@todo check if tellow is enabled
-                let tellows;
-                if (true){
+                var tellows;
+
+                if (true) {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
-                    tellows = await tellowsRaw.json();
+                    tellows = await tellowsRaw.json()
                 }
 
                 const answerURL = await webTrigger.getUrl("sipgateAnswer")
@@ -57,16 +56,17 @@ export async function SipgateCall(req) {
                     callActionDate: callStartedDate,
                     callInfoFromStorage,
                     tellows
-                });
+                })
 
                 if (body.diversion && callInfoFromStorage) { //call is redirected or call is unknown
-                    let description = `${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`;
-                    description = ReplacementManager.replaceVariables(`${callInfoFromStorage.description}${description}`, replacements);
+                    var description = `${callInfoFromStorage.description}${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`
 
-                    const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description);
+                    description = ReplacementManager.replaceJQLVariables(description, replacements)
+                    description = ReplacementManager.replaceVariables(description, replacements)
 
+                    const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
 
-                    debugLogging(debugOption, debugLog, [
+                    debugManager.log(debug, [
                         `${timeField}: SipcateCall Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`,
                         `${timeField}: SipcateCall Func -> Edited Description: ${description}`
                     ])
@@ -76,13 +76,13 @@ export async function SipgateCall(req) {
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
-                    summary = await jiraManager.replaceJQLVariables(summary, replacements);
-                    description = await jiraManager.replaceJQLVariables(description, replacements);
+                    summary = await jiraManager.replaceJQLVariables(summary, replacements)
+                    summary = ReplacementManager.replaceVariables(summary, replacements)
 
-                    summary = ReplacementManager.replaceVariables(summary, replacements);
-                    description = ReplacementManager.replaceVariables(description, replacements);
+                    description = await jiraManager.replaceJQLVariables(description, replacements)
+                    description = ReplacementManager.replaceVariables(description, replacements)
 
-                    debugLogging(debugOption, debugLog, [
+                    debugManager.log(debug, [
                         `${timeField}: SipcateCall Func -> Issue Summary: ${summary}`,
                         `${timeField}: SipcateCall Func -> Issue Description: ${description}`
                     ])
@@ -93,10 +93,9 @@ export async function SipgateCall(req) {
                         projectID: queryParameters.project[0],
                         customPhoneFieldID: queryParameters.phoneField[0],
                         callerNumber: body.from
-                    });
+                    })
 
-
-                    debugLogging(debugOption, debugLog, [
+                    debugManager.log(debug, [
                         `${timeField}: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`,
                         `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
                     ])
@@ -118,12 +117,12 @@ export async function SipgateCall(req) {
             }
         }
     } catch (err) {
-        if (debugOption) {
-            debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
+        if (debug.debugOption) {
+            debug.debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
 
             console.error(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
 
-            await storage.set("debug", { debugOption, debugLog })
+            await storage.set("debug", debug)
         }
 
         return {
