@@ -1,4 +1,4 @@
-import api, {route, storage} from "@forge/api";
+import api, { route, storage } from "@forge/api";
 import ReplacementManager from "./ReplacementManager"
 
 
@@ -8,7 +8,7 @@ export default class JIRAManager {
 
     async replaceJQLVariables(stringToReplace, replacements) {
 
-        if (!this._jql){
+        if (!this._jql) {
             this._jql = await storage.get("jql");
         }
 
@@ -17,7 +17,7 @@ export default class JIRAManager {
                 if (query.length > 0) {
                     const jqlQueryString = ReplacementManager.replaceVariables(query, replacements);
 
-                    if (!this._jqlQueryCache[jqlQueryString]){
+                    if (!this._jqlQueryCache[jqlQueryString]) {
                         const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
                             headers: {
                                 "Accept": "application/json"
@@ -43,7 +43,7 @@ export default class JIRAManager {
             customPhoneFieldID,
             callerNumber
         }
-    ){
+    ) {
         const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
             method: "POST",
             headers: {
@@ -73,7 +73,7 @@ export default class JIRAManager {
         return await issueRaw.json();
     }
 
-    async updateIssueDescription(issueID, description){
+    async updateIssueDescription(issueID, description) {
         return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}`, {
             method: "PUT",
             headers: {
@@ -95,6 +95,17 @@ export default class JIRAManager {
                     }
                 }
             })
+        })
+    }
+
+    async assignUser(issueID, accountID) {
+        return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/assignee`, {
+            method: "PUT",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ accountID })
         })
     }
 }
