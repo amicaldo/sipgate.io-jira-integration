@@ -39,10 +39,11 @@ export async function SipgateCall(req) {
         if (body.to?.length > 3) { //ist es ein interner call
             if (body.direction === "in") { //ist es ein eingehender CALL
                 //@todo check if tellow is enabled
-                var tellows;
+                var tellows
 
                 if (true) {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
+
                     tellows = await tellowsRaw.json()
                 }
 
@@ -87,20 +88,13 @@ export async function SipgateCall(req) {
                         `${timeField}: SipcateCall Func -> Issue Description: ${description}`
                     ])
 
-                    const issueJSON = await jiraManager.createIssue({
-                        description,
-                        issueTypeID: queryParameters.issueID[0],
-                        projectID: queryParameters.project[0],
-                        customPhoneFieldID: queryParameters.phoneField[0],
-                        callerNumber: body.from
-                    })
+                    const issueJSON = await jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
 
                     debugManager.log(debug, [
-                        `${timeField}: SipcateCall Func -> Raw Issue Data: ${JSON.stringify(issueRaw, null, 4)}`,
                         `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
                     ])
 
-                    await storage.set(body.xcid, { id: issue.id, description })
+                    await storage.set(body.xcid, { id: issueJSON.id, description })
                 }
 
                 return {

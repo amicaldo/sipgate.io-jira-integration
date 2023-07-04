@@ -38,15 +38,7 @@ export default class JIRAManager {
         return stringToReplace
     }
 
-    async createIssue(
-        {
-            description,
-            issueTypeID,
-            projectID,
-            customPhoneFieldID,
-            callerNumber
-        }
-    ) {
+    async createIssue(summary, description, issueTypeID, projectID, customPhoneFieldID, callerNumber) {
         const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
             method: "POST",
             headers: {
