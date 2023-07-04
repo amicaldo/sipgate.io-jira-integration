@@ -6,7 +6,7 @@
   "license": "MIT",
   "private": true,
   "devWebhook": "https://a8046329-41b6-484c-9d72-6dd7936fface.hello.atlassian-dev.net/x1/2Fz9IQUwAV5lDpIP2KY-ZvyV9xE?project=CALL&phoneField=10215&issueID=10200&closeID=71",
-  "prodWebhook": "https://9e2d7c09-530d-4dff-b75f-b11af6e4e53b.hello.atlassian-dev.net/x1/oiV90Ip7S9eh5wMTIss5z2xKcIc?project=CALL&phoneField=10500&issueID=10400&closeID=21",
+  "prodWebhook": "https://9e2d7c09-530d-4dff-b75f-b11af6e4e53b.hello.atlassian-dev.net/x1/LQRbCC3m5BQXcdUXtcWD-BBYOxk?project=CALL&phoneField=10500&issueID=10400&closeID=21",
   "scripts": {
     "deploy": "forge deploy",
     "lint": "./node_modules/.bin/eslint src/**/* || npm run --silent hook-errors",
