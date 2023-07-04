@@ -57,13 +57,13 @@ export async function SipgateAnswer(req) {
                     `${timeField}: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`,
                     `${timeField}: SipgateAnswer Func -> User: ${JSON.stringify(user, null, 4)}`,
                     `${timeField}: SipgateAnswer Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`,
-                    `${timeField}: SipgateAnswer Func -> Edited Description: ${data.description}${description}`
+                    `${timeField}: SipgateAnswer Func -> Edited Description: ${description}`
                 ])
 
-                await storage.set(body.xcid, { ...data, description: `${data.description}${description}`, date: callAnsweredDate.toJSON() })
+                await storage.set(body.xcid, { ...callInfoFromStorage, description, date: callAnsweredDate.toJSON() })
 
                 if (accountId) {
-                    const resAs = jiraManager.assignUser(data.id, accountId)
+                    const resAs = jiraManager.assignUser(callInfoFromStorage.id, accountId)
 
                     debugManager.log(debug, [
                         `${timeField}: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`
