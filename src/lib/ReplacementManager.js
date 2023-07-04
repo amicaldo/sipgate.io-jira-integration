@@ -2,7 +2,7 @@ import dayjs from "dayjs"
 
 export default class ReplacementManager {
     createReplacementMapping({issueConfiguration, body, callActionDate, callInfoFromStorage, tellows}) {
-        const replacements = []
+        let replacements = []
 
         if (issueConfiguration) {
             replacements.push(
@@ -95,8 +95,11 @@ export default class ReplacementManager {
         let result = textValue
 
         for (const [variable, replacement] of replacements) {
-            result = result.replace(new RegExp(variable, 'g'), replacement)
+            do {
+                result = result.replace(variable, replacement)
+            } while (result.indexOf(variable) > -1)
         }
+
         return result
     }
 }
