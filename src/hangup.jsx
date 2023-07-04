@@ -64,10 +64,13 @@ export async function SipgateHangup(req) {
                         const resTrans = jiraManager.transitionIssue(callInfoFromStorage.id, queryParameters.closeID[0])
 
                         debugManager.log(debug, [
-                            `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`,
-                            `${timeField}: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`
+                            `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`
                         ])
                     }
+
+                    debugManager.log(debug, [
+                        `${timeField}: SipgateHangup Func -> Call Ended, removing Storage for: ${body.xcid}`
+                    ])
 
                     await storage.delete(body.xcid)
                 } else {
