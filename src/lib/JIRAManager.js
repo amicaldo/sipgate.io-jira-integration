@@ -108,4 +108,15 @@ export default class JIRAManager {
             body: JSON.stringify({ accountID })
         })
     }
+
+    async transitionIssue(issueID, transitionID) {
+        return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/transitions`, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ transition: { "id": transitionID } })
+        })
+    }
 }
