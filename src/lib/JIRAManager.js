@@ -15,20 +15,22 @@ export default class JIRAManager {
         if (jql.queriesAmount > 0) {
             for await (let { query, variable, defaultValue } of jql.queries) {
                 if (query.length > 0) {
-                    const jqlQueryString = ReplacementManager.replaceVariables(query, replacements);
+                    if (stringToReplace.search(new RegExp(variable)) > -1) {
+                        const jqlQueryString = ReplacementManager.replaceVariables(query, replacements);
 
-                    if (!this._jqlQueryCache[jqlQueryString]) {
-                        const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
-                            headers: {
-                                "Accept": "application/json"
-                            }
-                        });
-                        this._jqlQueryCache[jqlQueryString] = await jqlQueryRaw.json();
+                        if (!this._jqlQueryCache[jqlQueryString]) {
+                            const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
+                                headers: {
+                                    "Accept": "application/json"
+                                }
+                            });
+                            this._jqlQueryCache[jqlQueryString] = await jqlQueryRaw.json();
+                        }
+
+                        defaultValue = ReplacementManager.replaceVariables(defaultValue, replacements);
+
+                        stringToReplace = stringToReplace.replace(variable, this._jqlQueryCache[jqlQueryString]?.issues?.[0]?.fields?.summary ? this._jqlQueryCache[jqlQueryString].issues[0].fields.summary : defaultValue);
                     }
-
-                    defaultValue = ReplacementManager.replaceVariables(defaultValue, replacements);
-
-                    stringToReplace = stringToReplace.replace(variable, this._jqlQueryCache[jqlQueryString]?.issues?.[0]?.fields?.summary ? this._jqlQueryCache[jqlQueryString].issues[0].fields.summary : defaultValue);
                 }
             }
         }
