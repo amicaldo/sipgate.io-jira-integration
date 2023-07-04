@@ -1,7 +1,7 @@
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
-import api, { route, storage } from "@forge/api"
+import { storage } from "@forge/api"
 import getBodyData from "./lib/getBodyData"
 import JIRAManager from "./lib/JIRAManager"
 import ReplacementManager from "./lib/ReplacementManager"
