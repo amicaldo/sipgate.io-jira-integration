@@ -71,7 +71,7 @@ export async function SipgateCall(req) {
                         `${timeField}: SipcateCall Func -> Edited Description: ${description}`
                     ])
 
-                    await storage.set(body.xcid, { ...callInfoFromStorage, description: description })
+                    await storage.set(body.xcid, { ...callInfoFromStorage, description })
                 } else { //new incomming call
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
