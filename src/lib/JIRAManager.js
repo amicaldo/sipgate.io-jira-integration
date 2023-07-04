@@ -3,38 +3,39 @@ import ReplacementManager from "./ReplacementManager"
 
 
 export default class JIRAManager {
-    _jql;
-    _jqlQueryCache;
+    _jql
+    _jqlQueryCache = {}
 
     async replaceJQLVariables(stringToReplace, replacements) {
-
         if (!this._jql) {
-            this._jql = await storage.get("jql");
+            this._jql = await storage.get("jql")
         }
 
-        if (jql.queriesAmount > 0) {
-            for await (let { query, variable, defaultValue } of jql.queries) {
+        if (this._jql.queriesAmount > 0) {
+            for await (let { query, variable, defaultValue } of this._jql.queries) {
                 if (query.length > 0) {
-                    if (stringToReplace.search(new RegExp(variable)) > -1) {
-                        const jqlQueryString = ReplacementManager.replaceVariables(query, replacements);
+                    if (stringToReplace.indexOf(variable) > -1) {
+                        const jqlQueryString = ReplacementManager.replaceVariables(query, replacements)
 
-                        if (!this._jqlQueryCache[jqlQueryString]) {
+                        if (!this._jqlQueryCache[variable]) {
                             const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
                                 headers: {
                                     "Accept": "application/json"
                                 }
-                            });
-                            this._jqlQueryCache[jqlQueryString] = await jqlQueryRaw.json();
+                            })
+
+                            this._jqlQueryCache[variable] = await jqlQueryRaw.json()
                         }
 
-                        defaultValue = ReplacementManager.replaceVariables(defaultValue, replacements);
+                        defaultValue = ReplacementManager.replaceVariables(defaultValue, replacements)
 
-                        stringToReplace = stringToReplace.replace(variable, this._jqlQueryCache[jqlQueryString]?.issues?.[0]?.fields?.summary ? this._jqlQueryCache[jqlQueryString].issues[0].fields.summary : defaultValue);
+                        stringToReplace = stringToReplace.replace(variable, this._jqlQueryCache[jqlQueryString]?.issues?.[0]?.fields?.summary ? this._jqlQueryCache[jqlQueryString].issues[0].fields.summary : defaultValue)
                     }
                 }
             }
         }
-        return stringToReplace;
+
+        return stringToReplace
     }
 
     async createIssue(
@@ -72,6 +73,7 @@ export default class JIRAManager {
                 }
             })
         })
+
         return await issueRaw.json();
     }
 
