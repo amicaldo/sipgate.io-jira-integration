@@ -66,11 +66,11 @@ export default class JIRAManager {
             })
         })
 
-        return await issueRaw.json();
+        return await issueRaw.json()
     }
 
     async updateIssueDescription(issueID, description) {
-        return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}`, {
+        const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}`, {
             method: "PUT",
             headers: {
                 "Accept": "application/json",
@@ -92,21 +92,25 @@ export default class JIRAManager {
                 }
             })
         })
+
+        return resDes
     }
 
     async assignUser(issueID, accountID) {
-        return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/assignee`, {
+        const resAs = await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/assignee`, {
             method: "PUT",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ accountID })
+            body: `{"accountId": "${accountID}"}`
         })
+
+        return resAs
     }
 
     async transitionIssue(issueID, transitionID) {
-        return await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/transitions`, {
+        const resTrans = await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}/transitions`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",

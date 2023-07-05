@@ -52,7 +52,7 @@ export async function SipgateHangup(req) {
                 description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
 
-                const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
+                const resDes = await jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
 
                 debugManager.log(debug, [
                     `${timeField}: SipgateHangup Func -> Edited Issue Response: ${JSON.stringify(resDes, null, 4)}`,

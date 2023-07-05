@@ -36,7 +36,7 @@ export async function SipgateAnswer(req) {
             const callInfoFromStorage = await storage.get(body.xcid)
             const userID = body.userId ? body.userId : body["userId%5B%5D"] ? body["userId%5B%5D"] : ""
             const user = body.user ? body.user : body["user%5B%5D"] ? body["user%5B%5D"] : ""
-            const accountId = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
+            const accountID = await storage.get(`sipgate_id_${Array.isArray(userID) ? userID[0] : userID}`)
 
             if (callInfoFromStorage) {
                 const callLogConfiguration = await storage.get("callLogConfiguration")
@@ -51,7 +51,7 @@ export async function SipgateAnswer(req) {
                 description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
 
-                const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
+                const resDes = await jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
 
                 debugManager.log(debug, [
                     `${timeField}: SipgateAnswer Func -> UserID: ${JSON.stringify(userID, null, 4)}`,
@@ -62,8 +62,8 @@ export async function SipgateAnswer(req) {
 
                 await storage.set(body.xcid, { ...callInfoFromStorage, description, date: callAnsweredDate.toJSON() })
 
-                if (accountId) {
-                    const resAs = jiraManager.assignUser(callInfoFromStorage.id, accountId)
+                if (accountID) {
+                    const resAs = await jiraManager.assignUser(callInfoFromStorage.id, accountID)
 
                     debugManager.log(debug, [
                         `${timeField}: SipgateAnswer Func -> Assign Response: ${JSON.stringify(resAs, null, 4)}`
