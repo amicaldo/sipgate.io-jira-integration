@@ -5,12 +5,12 @@ export default function DebugLog() {
     const [debug, setDebug] = useState({})
     const submitForm = async formData => {
         await storage.set("debug", {
-            debugOption: formData.debug ? true : false,
+            debugOption: formData.debug,
             debugLog: formData.log ? [] : debug.debugLog
         })
 
         setDebug({
-            debugOption: formData.debug ? true : false,
+            debugOption: formData.debug,
             debugLog: formData.log ? [] : debug.debugLog
         })
     }
