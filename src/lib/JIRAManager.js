@@ -18,7 +18,7 @@ export default class JIRAManager {
                         const jqlQueryString = ReplacementManager.replaceVariables(query, replacements)
 
                         if (!this._jqlQueryCache[variable]) {
-                            const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${encodeURIComponent(jqlQueryString)}`, {
+                            const jqlQueryRaw = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jqlQueryString}`, {
                                 headers: {
                                     "Accept": "application/json"
                                 }
