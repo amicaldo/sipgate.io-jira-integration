@@ -118,5 +118,7 @@ export default class JIRAManager {
             },
             body: JSON.stringify({ transition: { "id": transitionID } })
         })
+
+        return resTrans
     }
 }
