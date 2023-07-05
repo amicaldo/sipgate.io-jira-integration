@@ -38,10 +38,9 @@ export async function SipgateCall(req) {
 
         if (body.to?.length > 3) { //ist es ein interner call
             if (body.direction === "in") { //ist es ein eingehender CALL
-                //@todo check if tellow is enabled
                 var tellows
 
-                if (true) {
+                if (issueConfiguration.tellows) {
                     const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
 
                     tellows = await tellowsRaw.json()
