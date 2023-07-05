@@ -87,7 +87,7 @@ export default function IssueConfiguration() {
                 </Heading>
                 <Text>
                     <Strong>{"{{$number}}: "}</Strong>
-                    This variable will be replaced with the calling number. The number will be formated in the <Strong>ISO-3224</Strong> format.
+                    This variable will be replaced with the calling number.
                 </Text>
                 <Text>
                     <Strong>{"{{$date}}: "}</Strong>
