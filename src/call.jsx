@@ -62,7 +62,7 @@ export async function SipgateCall(req) {
                 if (body.diversion && callInfoFromStorage) { //call is redirected or call is unknown
                     var description = `${callInfoFromStorage.description}${callLogConfiguration?.redirectedCall ? `\n${callLogConfiguration.redirectedCall}` : ""}`
 
-                    description = ReplacementManager.replaceJQLVariables(description, replacements)
+                    description = await jiraManager.replaceJQLVariables(description, replacements)
                     description = ReplacementManager.replaceVariables(description, replacements)
 
                     const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)

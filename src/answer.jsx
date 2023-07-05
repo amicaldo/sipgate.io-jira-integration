@@ -48,7 +48,7 @@ export async function SipgateAnswer(req) {
                 })
                 var description = `${callInfoFromStorage.description}${callLogConfiguration?.answerCall ? `\n${callLogConfiguration.answerCall}` : ""}`
 
-                description = ReplacementManager.replaceJQLVariables(description, replacements)
+                description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
 
                 const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)

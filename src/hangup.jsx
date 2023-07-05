@@ -49,7 +49,7 @@ export async function SipgateHangup(req) {
                 })
                 var description = `${data.description}${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}${cause === "normalClearing" ? `${callLogConfiguration?.callDuration ? `\n\n${callLogConfiguration.callDuration}` : ""}`: ""}`
 
-                description = ReplacementManager.replaceJQLVariables(description, replacements)
+                description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
 
                 const resDes = jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
