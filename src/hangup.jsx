@@ -39,7 +39,7 @@ export async function SipgateHangup(req) {
                 `${timeField}: SipgateHangup Func -> Query Parameters: ${JSON.stringify(queryParameters, null, 4)}`
             ])
 
-            if (callInfoFromStorage && !cause === "forwarded") {
+            if (callInfoFromStorage && cause !== "forwarded") {
                 const callLogConfiguration = await storage.get("callLogConfiguration")
                 const replacements = replacementManager.createReplacementMapping({
                     issueConfiguration,
@@ -47,7 +47,7 @@ export async function SipgateHangup(req) {
                     callActionDate: callHangupDate,
                     callInfoFromStorage
                 })
-                var description = `${data.description}${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}${cause === "normalClearing" ? `${callLogConfiguration?.callDuration ? `\n\n${callLogConfiguration.callDuration}` : ""}`: ""}`
+                var description = `${callInfoFromStorage.description}${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}${cause === "normalClearing" ? `${callLogConfiguration?.callDuration ? `\n\n${callLogConfiguration.callDuration}` : ""}`: ""}`
 
                 description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
@@ -61,7 +61,7 @@ export async function SipgateHangup(req) {
 
                 if (cause === "normalClearing") {
                     if (queryParameters.closeID && !body.diversion) {
-                        const resTrans = jiraManager.transitionIssue(callInfoFromStorage.id, queryParameters.closeID[0])
+                        const resTrans = await jiraManager.transitionIssue(callInfoFromStorage.id, queryParameters.closeID[0])
 
                         debugManager.log(debug, [
                             `${timeField}: SipgateHangup Func -> Transsition Response: ${JSON.stringify(resTrans, null, 4)}`
