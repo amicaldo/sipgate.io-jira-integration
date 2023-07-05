@@ -1,5 +1,5 @@
 import { storage } from "@forge/api"
-import ForgeUI, { useEffect, useState, Form, Heading, Link, SectionMessage, Strong, Tab, Text, TextArea, TextField } from "@forge/ui"
+import ForgeUI, { useEffect, useState, Form, Heading, Link, SectionMessage, Strong, Tab, Text, TextArea, TextField, Toggle } from "@forge/ui"
 
 export default function IssueConfiguration() {
     const [issueConfiguration, setIssueConfiguration] = useState({})
@@ -27,7 +27,8 @@ export default function IssueConfiguration() {
             cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " aus {{$city}}",
             timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}} Uhr",
             summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$number}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
-            description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : ""
+            description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : "",
+            tellows: issueConfigurationRaw && typeof issueConfigurationRaw.tellows === "boolean" ? issueConfigurationRaw.tellows : false
         })
     }, [])
 
@@ -50,6 +51,8 @@ export default function IssueConfiguration() {
                 We use <Link href="https://day.js.org/docs/en/display/format" openNewTab={true}>DayJS</Link> for formatting the time and date.
             </Text>
             <Form onSubmit={submitForm}>
+                <Toggle label="Tellows Opt-In" name="tellows" defaultChecked={issueConfiguration.tellows} />
+                <Text>By activating this checkbox phone numbers of incoming calls are processed by tellows UG (limited liability). <Link href="https://www.tellows.de/s/about-de/datenschutz" openNewTab={true}>Here you can find the privacy policy of tellows UG.</Link></Text>
                 <TextField
                     label="Timezone"
                     name="timezone"
