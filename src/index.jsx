@@ -9,7 +9,7 @@ import DebugLog from "./tabs/debugLog"
 export const run = render(
     <AdminPage>
         <Text>
-            {"Welcome to the configuration UI for your Sipgate + JIRA integration by amicaldo.\nWe will create one ticket for each incomming call.\nHere, you can customize the format of each ticket created for incoming calls."}
+            {"Welcome to the configuration UI for your Sipgate Integration for Jira by amicaldo.\nWe will create one ticket for each incomming call.\nHere, you can customize the format of each ticket created for incoming calls."}
         </Text>
         <Tabs>
             <IssueConfiguration />

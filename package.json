@@ -1,5 +1,5 @@
 {
-  "name": "jira-sipgate-connector",
+  "name": "sipgate-integration-for-jira",
   "version": "1.0.12",
   "author": "amicaldo GmbH <admin@amicaldo.de>",
   "main": "index.js",
