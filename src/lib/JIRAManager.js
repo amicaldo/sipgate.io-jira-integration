@@ -11,7 +11,7 @@ export default class JIRAManager {
             this._jql = await storage.get("jql")
         }
 
-        if (this._jql.queriesAmount > 0) {
+        if (this._jql.enabled && this._jql.queriesAmount > 0) {
             for await (let { query, variable, defaultValue } of this._jql.queries) {
                 if (query.length > 0) {
                     if (stringToReplace.indexOf(variable) > -1) {
