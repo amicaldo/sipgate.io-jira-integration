@@ -19,16 +19,16 @@ export default function CallLogConfiguration() {
         const callLogConfigurationRaw = await storage.get("callLogConfiguration")
 
         setCallLogConfiguration({
-            incommingCall: callLogConfigurationRaw?.incommingCall ? callLogConfigurationRaw.incommingCall : "{{$timeField}}: Eingehender Anruf auf - {{$sipgateNumber}}",
-            redirectedCall: callLogConfigurationRaw?.redirectedCall ? callLogConfigurationRaw.redirectedCall : "{{$timeField}}: Anruf weitergeleitet zu {{$sipgateUsername}}",
-            answerCall: callLogConfigurationRaw?.answerCall ? callLogConfigurationRaw.answerCall : "{{$timeField}}: Anruf angenommen von {{$sipgateUsername}}",
-            normalClearing: callLogConfigurationRaw?.normalClearing ? callLogConfigurationRaw.normalClearing : "{{$timeField}}: Anruf aufgelegt.",
-            busy: callLogConfigurationRaw?.busy ? callLogConfigurationRaw.busy : "{{$timeField}}: Der Anruf wurde beendet da die angerufene Person beschäftigt war.",
-            cancel: callLogConfigurationRaw?.cancel ? callLogConfigurationRaw.cancel : "{{$timeField}}: Der Anruf wurde beendet bevor eine Person ran gehen konnte.",
-            noAnswer: callLogConfigurationRaw?.noAnswer ? callLogConfigurationRaw.noAnswer : "{{$timeField}}: Der Anruf wurde beendet da die angerufene Person diesen abgelehnt hat.",
-            congestion: callLogConfigurationRaw?.congestion ? callLogConfigurationRaw.congestion : "{{$timeField}}: Der Anruf wurde beendet da die angerufene Person nicht erreichbar war.",
-            notFound: callLogConfigurationRaw?.notFound ? callLogConfigurationRaw.notFound : "{{$timeField}}: Der Anruf wurde beendet da entweder die angerufene Telefonnummer nicht existiert oder diese Person nicht online ist.",
-            callDuration: callLogConfigurationRaw?.callDuration ? callLogConfigurationRaw.callDuration : "Anrufdauer: {{$minutes}}:{{$seconds}} Minuten."
+            incommingCall: callLogConfigurationRaw?.incommingCall ? callLogConfigurationRaw.incommingCall : "{{$timeField}}: Incoming call on - {{$sipgateNumber}}",
+            redirectedCall: callLogConfigurationRaw?.redirectedCall ? callLogConfigurationRaw.redirectedCall : "{{$timeField}}: Call redirected to {{$sipgateUsername}}",
+            answerCall: callLogConfigurationRaw?.answerCall ? callLogConfigurationRaw.answerCall : "{{$timeField}}: Call accepted from {{$sipgateUsername}}",
+            normalClearing: callLogConfigurationRaw?.normalClearing ? callLogConfigurationRaw.normalClearing : "{{$timeField}}: Hang up call.",
+            busy: callLogConfigurationRaw?.busy ? callLogConfigurationRaw.busy : "{{$timeField}}: The call was terminated because the person called was busy.",
+            cancel: callLogConfigurationRaw?.cancel ? callLogConfigurationRaw.cancel : "{{$timeField}}: The call was terminated before a person could answer.",
+            noAnswer: callLogConfigurationRaw?.noAnswer ? callLogConfigurationRaw.noAnswer : "{{$timeField}}: The call was terminated because the person called rejected it.",
+            congestion: callLogConfigurationRaw?.congestion ? callLogConfigurationRaw.congestion : "{{$timeField}}: The call was terminated because the person called could not be reached.",
+            notFound: callLogConfigurationRaw?.notFound ? callLogConfigurationRaw.notFound : "{{$timeField}}: The call was terminated because either the called phone number does not exist or the person is not online.",
+            callDuration: callLogConfigurationRaw?.callDuration ? callLogConfigurationRaw.callDuration : "Call duration: {{$minutes}}:{{$seconds}} minutes."
         })
     }, [])
 

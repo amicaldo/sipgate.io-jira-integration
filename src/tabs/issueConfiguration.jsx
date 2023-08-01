@@ -23,10 +23,10 @@ export default function IssueConfiguration() {
             hourFormat: issueConfigurationRaw?.hourFormat ? issueConfigurationRaw.hourFormat : "HH:mm:ss",
             dateFormat: issueConfigurationRaw?.dateFormat ? issueConfigurationRaw.dateFormat : "DD.MM.YYYY",
             sipgateNumber: issueConfigurationRaw?.sipgateNumber ? issueConfigurationRaw.sipgateNumber : "",
-            spamRatingField: issueConfigurationRaw?.spamRatingField ? issueConfigurationRaw.spamRatingField : " (Rate: {{$rating}})",
-            cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " aus {{$city}}",
-            timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}} Uhr",
-            summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Anruf von {{$number}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
+            spamRatingField: issueConfigurationRaw?.spamRatingField ? issueConfigurationRaw.spamRatingField : " (Rating: {{$rating}})",
+            cityField: issueConfigurationRaw?.cityField ? issueConfigurationRaw.cityField : " from {{$city}}",
+            timeField: issueConfigurationRaw?.timeField ? issueConfigurationRaw.timeField : "{{$time}}",
+            summary: issueConfigurationRaw?.summary ? issueConfigurationRaw.summary : "Call from {{$number}}{{$spamRatingField}}{{$cityField}} - {{$date}} - {{$timeField}}",
             description: issueConfigurationRaw?.description ? issueConfigurationRaw.description : "",
             tellows: issueConfigurationRaw && typeof issueConfigurationRaw.tellows === "boolean" ? issueConfigurationRaw.tellows : false
         })
