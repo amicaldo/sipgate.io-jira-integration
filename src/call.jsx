@@ -99,7 +99,7 @@ export async function SipgateCall(req) {
                 return {
                     headers: { "Content-Type": ["application/xml"] },
                     body: xml({
-                        Response: [
+                        "Response": [
                             { _attr: { onAnswer: `${answerURL}` } },
                             { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
                         ]
