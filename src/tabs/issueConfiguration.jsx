@@ -36,7 +36,10 @@ export default function IssueConfiguration() {
         <Tab label="Issue Configuration">
             <SectionMessage title="About">
                 <Text>
-                    {"This tab allows you to configure the issue design.\nHere you can configure the tool output and settings"}
+                    {"This tab allows you to configure the issue design.\nHere you can configure the tool output and settings."}
+                </Text>
+                <Text>
+                {"This is Version 1.1.1 of the App."}
                 </Text>
             </SectionMessage>
             <SectionMessage title="Warning" appearance="warning">
