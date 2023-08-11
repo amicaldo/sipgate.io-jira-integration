@@ -1,4 +1,3 @@
-import xml from "xml"
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
@@ -98,12 +97,7 @@ export async function SipgateCall(req) {
 
                 return {
                     headers: { "Content-Type": ["application/xml"] },
-                    body: xml({
-                        "Response": [
-                            { _attr: { onAnswer: `${answerURL}` } },
-                            { _attr: { onHangup: `${hangupURL}?closeID=${queryParameters.closeID[0]}` } }
-                        ]
-                    }),
+                    body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}?closeID=${queryParameters.closeID[0]}" />`,
                     statusCode: 200,
                     statusText: "OK"
                 }
