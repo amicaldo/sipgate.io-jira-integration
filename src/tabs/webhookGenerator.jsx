@@ -28,11 +28,11 @@ export default function WebhookGenerator() {
             </SectionMessage>
             <Form onSubmit={generateURL}>
                 <TextField
-                    title="projectID"
+                    title="projectKey"
                     name="projectID"
                     isRequired
                     type="text"
-                    description={"This is the ID of the project that you want to create tickets in when a call comes in. This field is required."}
+                    description={"This is the key of the project that you want to create tickets in when a call comes in. This field is required."}
                 />
                 <TextField
                     title="cField1"
