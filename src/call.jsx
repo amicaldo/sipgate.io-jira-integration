@@ -11,8 +11,15 @@ dayjs.extend(utc)
 dayjs.extend(timezone)
 
 export async function SipgateCall(req) {
-    const issueConfiguration = await storage.get("issueConfiguration")
-    const debug = await storage.get("debug")
+    console.log("NEUER eingehender call");
+
+    const [issueConfiguration, debug] =
+        await Promise.all(
+            [
+                storage.get("issueConfiguration"),
+                storage.get("debug")
+            ]);
+
     const callStartedDate = dayjs().tz(issueConfiguration.timezone)
 
     const jiraManager = new JIRAManager()
@@ -36,19 +43,27 @@ export async function SipgateCall(req) {
         ])
 
         if (body.to?.length > 3) { //ist es ein interner call
+            console.log("not internal call because lenght is > 3", body.to?.length);
             if (body.direction === "in") { //ist es ein eingehender CALL
-                var tellows
+                var tellows;
+                let tellowsResponse;
 
                 if (issueConfiguration.tellows) {
-                    const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
-
-                    tellows = await tellowsRaw.json()
+                    try {
+                        const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
+                        tellowsResponse = await tellowsRaw.text()
+                        tellowsResponse = tellowsResponse.replace('Partner Data not correct', '');
+                        tellows = JSON.parse(tellowsResponse)
+                    } catch (e) {
+                        console.log("Tellow API not accessible", e);
+                    }
                 }
 
                 const answerURL = await webTrigger.getUrl("sipgateAnswer")
                 const hangupURL = await webTrigger.getUrl("sipgateHangup")
                 const callInfoFromStorage = await storage.get(body.xcid)
 
+                console.log("create replacement mapping. call.jsx - 53");
                 const replacements = replacementManager.createReplacementMapping({
                     issueConfiguration,
                     body,
@@ -72,42 +87,69 @@ export async function SipgateCall(req) {
 
                     await storage.set(body.xcid, { ...callInfoFromStorage, description })
                 } else { //new incomming call
+                    console.log("detected new incomming call");
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
+                    console.log("on before jiraManager.replaceJQLVariables - summary");
                     summary = await jiraManager.replaceJQLVariables(summary, replacements)
+                    console.log("on before jiraManager.replaceVariables");
                     summary = ReplacementManager.replaceVariables(summary, replacements)
+                    console.log("on after jiraManager.replaceJQLVariables - summary");
 
+                    console.log("on before jiraManager.replaceJQLVariables - description");
                     description = await jiraManager.replaceJQLVariables(description, replacements)
                     description = ReplacementManager.replaceVariables(description, replacements)
+                    console.log("on after jiraManager.replaceJQLVariables - description");
 
                     debugManager.log(debug, [
                         `${timeField}: SipcateCall Func -> Issue Summary: ${summary}`,
                         `${timeField}: SipcateCall Func -> Issue Description: ${description}`
                     ])
 
-                    jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from).then(async resolved => {
+                    // let issueJSON = jiraManager
+                    //     .createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
+                    //     .then(async issueJSON => {
+                    //             debugManager.log(debug, [
+                    //                 `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
+                    //             ])
+                    //             await storage.set(body.xcid, {id: issueJSON.id, description})
+                    //         },
+                    //         async rejected => {
+                    //             console.error(`${timeField}: SipcateCall Func -> Real Error: ${JSON.stringify(rejected, null, 4)}`)
+                    //             debug.debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(rejected, null, 4)}`)
+                    //             await storage.set("debug", debug)
+                    //         })
+
+                    try {
+                        const issueJSON = await jiraManager
+                            .createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
                         debugManager.log(debug, [
                             `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
                         ])
-
                         await storage.set(body.xcid, { id: issueJSON.id, description })
-                    }, async rejected => {
-                        debug.debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(rejected, null, 4)}`)
-
-                        console.error(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(rejected, null, 4)}`)
-
-                        await storage.set("debug", debug)
-                    })
-
-                    // const issueJSON = await jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
-
-                    // debugManager.log(debug, [
-                    //     `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
-                    // ])
-
-                    // await storage.set(body.xcid, { id: issueJSON.id, description })
+                    } catch (e) {
+                        console.log("Error creating jira issue", e);
+                    }
                 }
+
+                try {
+                    console.log("answerURL", answerURL);
+                    console.log("hangupURL", hangupURL);
+                    console.log("queryParametersCloseID", queryParameters.closeID[0]);
+
+                    console.log({
+                        headers: { "Content-Type": ["application/xml"] },
+                        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}?closeID=${queryParameters.closeID[0]}" />`,
+                        statusCode: 200,
+                        statusText: "OK"
+                    });
+                }
+                catch (e) {
+                    console.log("error on response generation", e);
+                }
+
+
 
                 return {
                     headers: { "Content-Type": ["application/xml"] },

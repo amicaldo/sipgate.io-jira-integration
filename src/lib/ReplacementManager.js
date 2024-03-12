@@ -35,7 +35,7 @@ export default class ReplacementManager {
             replacements.push(
                 ["{{$number}}", ""],
                 ["{{$sipgateUserID}}", ""],
-                ["{{$sipgateUsername}}", ""]
+                ["{{$sipgateUsername}}", ""],
                 ["{{$sipgateNumber}}", ""]
             )
         }

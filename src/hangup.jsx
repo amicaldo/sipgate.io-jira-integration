@@ -49,8 +49,12 @@ export async function SipgateHangup(req) {
                 })
                 var description = `${callInfoFromStorage.description}${callLogConfiguration?.[cause] ? `\n${callLogConfiguration[cause]}` : ""}${cause === "normalClearing" ? `${callLogConfiguration?.callDuration ? `\n\n${callLogConfiguration.callDuration}` : ""}`: ""}`
 
+                console.log("hangup:52 before replaceJQLVariables");
+
                 description = await jiraManager.replaceJQLVariables(description, replacements)
                 description = ReplacementManager.replaceVariables(description, replacements)
+
+                console.log("hangup:52 after replaceJQLVariables");
 
                 const resDes = await jiraManager.updateIssueDescription(callInfoFromStorage.id, description)
 
@@ -79,10 +83,7 @@ export async function SipgateHangup(req) {
             }
 
             return {
-                headers: { "Content-Type": ["application/json"] },
-                body: "",
-                statusCode: 200,
-                statusText: "OK"
+                statusCode: 200
             }
         }
     } catch (error) {
@@ -96,7 +97,6 @@ export async function SipgateHangup(req) {
 
         return {
             body: error + "  ",
-            headers: { "Content-Type": ["application/json"] },
             statusCode: 400,
             statusText: "Bad Request",
         }
