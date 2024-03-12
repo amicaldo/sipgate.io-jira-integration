@@ -86,13 +86,27 @@ export async function SipgateCall(req) {
                         `${timeField}: SipcateCall Func -> Issue Description: ${description}`
                     ])
 
-                    const issueJSON = await jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
+                    jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from).then(async resolved => {
+                        debugManager.log(debug, [
+                            `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
+                        ])
 
-                    debugManager.log(debug, [
-                        `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
-                    ])
+                        await storage.set(body.xcid, { id: issueJSON.id, description })
+                    }, async rejected => {
+                        debug.debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(rejected, null, 4)}`)
 
-                    await storage.set(body.xcid, { id: issueJSON.id, description })
+                        console.error(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(rejected, null, 4)}`)
+
+                        await storage.set("debug", debug)
+                    })
+
+                    // const issueJSON = await jiraManager.createIssue(summary, description, queryParameters.issueID[0], queryParameters.project[0], queryParameters.phoneField[0], body.from)
+
+                    // debugManager.log(debug, [
+                    //     `${timeField}: SipcateCall Func -> JSON Issue Data: ${JSON.stringify(issueJSON, null, 4)}`
+                    // ])
+
+                    // await storage.set(body.xcid, { id: issueJSON.id, description })
                 }
 
                 return {

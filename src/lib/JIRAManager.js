@@ -38,35 +38,66 @@ export default class JIRAManager {
         return stringToReplace
     }
 
-    async createIssue(summary, description, issueTypeID, projectID, customPhoneFieldID, callerNumber) {
-        const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                fields: {
-                    summary,
-                    issuetype: { id: issueTypeID },
-                    project: { key: projectID },
-                    [`customfield_${customPhoneFieldID}`]: `+${callerNumber}`,
-                    description: {
-                        content: [{
+    createIssue(summary, description, issueTypeID, projectID, customPhoneFieldID, callerNumber) {
+        return new Promise((resolve, reject) => {
+            api.asApp().requestJira(route`/rest/api/3/issue`, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    fields: {
+                        summary,
+                        issuetype: { id: issueTypeID },
+                        project: { key: projectID },
+                        [`customfield_${customPhoneFieldID}`]: `+${callerNumber}`,
+                        description: {
                             content: [{
-                                text: description,
-                                type: "text"
+                                content: [{
+                                    text: description,
+                                    type: "text"
+                                }],
+                                type: "paragraph"
                             }],
-                            type: "paragraph"
-                        }],
-                        type: "doc",
-                        version: 1
+                            type: "doc",
+                            version: 1
+                        }
                     }
-                }
-            })
+                })
+            }).then(async resolved => resolve(await resolved.json()), async rejected => reject(rejected))
         })
+    }
 
-        return await issueRaw.json()
+    // async createIssue(summary, description, issueTypeID, projectID, customPhoneFieldID, callerNumber) {
+    //     const issueRaw = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+    //         method: "POST",
+    //         headers: {
+    //             "Accept": "application/json",
+    //             "Content-Type": "application/json"
+    //         },
+    //         body: JSON.stringify({
+    //             fields: {
+    //                 summary,
+    //                 issuetype: { id: issueTypeID },
+    //                 project: { key: projectID },
+    //                 [`customfield_${customPhoneFieldID}`]: `+${callerNumber}`,
+    //                 description: {
+    //                     content: [{
+    //                         content: [{
+    //                             text: description,
+    //                             type: "text"
+    //                         }],
+    //                         type: "paragraph"
+    //                     }],
+    //                     type: "doc",
+    //                     version: 1
+    //                 }
+    //             }
+    //         })
+    //     })
+
+    //     return await issueRaw.json()
     }
 
     async updateIssueDescription(issueID, description) {
