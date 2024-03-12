@@ -98,7 +98,7 @@ export default class JIRAManager {
     //     })
 
     //     return await issueRaw.json()
-    }
+    // }
 
     async updateIssueDescription(issueID, description) {
         const resDes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueID}`, {
