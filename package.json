@@ -15,7 +15,8 @@
   },
   "devDependencies": {
     "eslint": "^8.53.0",
-    "eslint-plugin-react-hooks": "^4.6.0"
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "libphonenumber-js": "^1.10.58"
   },
   "dependencies": {
     "@forge/api": "^2.20.0",

@@ -1,6 +1,7 @@
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
+import { parsePhoneNumber } from 'libphonenumber-js';
 import { fetch, storage, webTrigger } from "@forge/api"
 import getBodyData from "./lib/getBodyData"
 import JIRAManager from "./lib/JIRAManager"
@@ -33,6 +34,14 @@ export async function SipgateCall(req) {
 
     try {
         const body = getBodyData(req.body)
+
+        const formattedPhoneNumber = parsePhoneNumber(body.from);
+
+        if (formattedPhoneNumber) {
+            //Die Telefonnummer im internationalen Format formatieren = +49 0000 0000
+            body.from = formattedPhoneNumber.formatInternational();
+        }
+
         const queryParameters = req.queryParameters
         const callLogConfiguration = await storage.get("callLogConfiguration")
 
