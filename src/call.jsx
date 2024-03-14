@@ -35,12 +35,21 @@ export async function SipgateCall(req) {
     try {
         const body = getBodyData(req.body)
 
-        const formattedPhoneNumber = parsePhoneNumber(body.from);
-
-        if (formattedPhoneNumber) {
-            //Die Telefonnummer im internationalen Format formatieren = +49 0000 0000
-            body.from = formattedPhoneNumber.formatInternational();
+        try {
+            if (!body.from.startsWith('+')){
+                body.from = "+"+body.from;
+            }
+            console.log("try to parse", body.from);
+            const formattedPhoneNumber = parsePhoneNumber(body.from);
+            if (formattedPhoneNumber) {
+                //Die Telefonnummer im internationalen Format formatieren = +49 0000 0000
+                body.from = formattedPhoneNumber.formatInternational();
+                console.log("parsed phone number successful", body.from);
+            }
+        } catch(e){
+            console.log("parse of phone number not successful",body.from, e);
         }
+
 
         const queryParameters = req.queryParameters
         const callLogConfiguration = await storage.get("callLogConfiguration")
@@ -59,7 +68,8 @@ export async function SipgateCall(req) {
 
                 if (issueConfiguration.tellows) {
                     try {
-                        const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/+${body.from}?json=1`)
+                        const encodedPhoneNumber = encodeURIComponent(body.from);
+                        const tellowsRaw = await fetch(`https://www.tellows.de/basic/num/${encodedPhoneNumber}?json=1`)
                         tellowsResponse = await tellowsRaw.text()
                         tellowsResponse = tellowsResponse.replace('Partner Data not correct', '');
                         tellows = JSON.parse(tellowsResponse)

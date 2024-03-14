@@ -71,7 +71,7 @@ export default class JIRAManager {
                     summary,
                     issuetype: { id: issueTypeID },
                     project: { key: projectID },
-                    [`customfield_${customPhoneFieldID}`]: `+${callerNumber}`,
+                    [`customfield_${customPhoneFieldID}`]: `${callerNumber}`,
                     description: {
                         content: [{
                             content: [{
