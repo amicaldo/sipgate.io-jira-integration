@@ -23,7 +23,7 @@ export default class ReplacementManager {
             const sipgateUserName = body.user || body["user%5B%5D"] || ""
 
             replacements.push(
-                ["{{$number}}", `\u002b${body.from}`],
+                ["{{$number}}", `${body.from}`],
                 ["{{$sipgateUserID}}", sipgateUserID],
                 ["{{$sipgateUsername}}", sipgateUserName.replace("+", " ")]
             )
