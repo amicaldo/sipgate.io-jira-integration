@@ -11,6 +11,32 @@ import DebugManager from "./lib/debugManager"
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
+export async function handleIncommingCall(req) {
+    const queryParameters = req.queryParameters
+    const body = getBodyData(req.body)
+
+    fetch(decodeURIComponent(queryParameters.createIssuePostURL[0])+ `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}`, {
+        method: 'POST',
+        headers: { "Content-Type": ["application/json"] },
+        body: JSON.stringify(body)
+    }).then()
+
+    const answerURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onAnswer`
+    const hangupURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
+
+    return {
+        headers: { "Content-Type": ["application/xml"] },
+        body: xml({
+            Response: [
+                { _attr: { onAnswer: answerURL } },
+                { _attr: { onHangup: hangupURL } }
+            ]
+        }),
+        statusCode: 200,
+        statusText: "OK"
+    }
+}
+
 export async function SipgateCall(req) {
     console.log("NEUER eingehender call");
 
