@@ -78,11 +78,12 @@ export async function SipgateCall(req) {
                     }
                 }
 
-                const answerURL = await webTrigger.getUrl("sipgateAnswer")
-                const hangupURL = await webTrigger.getUrl("sipgateHangup")
+                const answerURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onAnswer`
+                const hangupURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
+
                 const callInfoFromStorage = await storage.get(body.xcid)
 
-                console.log("create replacement mapping. call.jsx - 53");
+                console.log("create replacement mapping. call.jsx - 53", body.from);
                 const replacements = replacementManager.createReplacementMapping({
                     issueConfiguration,
                     body,
@@ -106,20 +107,20 @@ export async function SipgateCall(req) {
 
                     await storage.set(body.xcid, { ...callInfoFromStorage, description })
                 } else { //new incomming call
-                    console.log("detected new incomming call");
+                    console.log("detected new incomming call", body.from);
                     var summary = issueConfiguration.summary
                     var description = `${issueConfiguration.description}\n${callLogConfiguration.incommingCall}`
 
                     console.log("on before jiraManager.replaceJQLVariables - summary");
                     summary = await jiraManager.replaceJQLVariables(summary, replacements)
-                    console.log("on before jiraManager.replaceVariables");
+                    console.log("on before jiraManager.replaceVariables", summary);
                     summary = ReplacementManager.replaceVariables(summary, replacements)
-                    console.log("on after jiraManager.replaceJQLVariables - summary");
+                    console.log("on after jiraManager.replaceJQLVariables - summary", summary);
 
-                    console.log("on before jiraManager.replaceJQLVariables - description");
+                    console.log("on before jiraManager.replaceJQLVariables - description", description);
                     description = await jiraManager.replaceJQLVariables(description, replacements)
                     description = ReplacementManager.replaceVariables(description, replacements)
-                    console.log("on after jiraManager.replaceJQLVariables - description");
+                    console.log("on after jiraManager.replaceJQLVariables - description", description);
 
                     debugManager.log(debug, [
                         `${timeField}: SipcateCall Func -> Issue Summary: ${summary}`,
@@ -159,7 +160,7 @@ export async function SipgateCall(req) {
 
                     console.log({
                         headers: { "Content-Type": ["application/xml"] },
-                        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}?closeID=${queryParameters.closeID[0]}" />`,
+                        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
                         statusCode: 200,
                         statusText: "OK"
                     });
@@ -172,7 +173,7 @@ export async function SipgateCall(req) {
 
                 return {
                     headers: { "Content-Type": ["application/xml"] },
-                    body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}?closeID=${queryParameters.closeID[0]}" />`,
+                    body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
                     statusCode: 200,
                     statusText: "OK"
                 }
