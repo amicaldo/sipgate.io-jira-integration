@@ -3,8 +3,8 @@ import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
 import { storage } from "@forge/api"
 import getBodyData from "./lib/getBodyData"
-import JIRAManager from "./lib/JIRAManager"
-import ReplacementManager from "./lib/ReplacementManager"
+import JiraManager from "./lib/jiraManager"
+import ReplacementManager from "./lib/replacementManager"
 import DebugManager from "./lib/debugManager"
 
 dayjs.extend(utc)
@@ -15,7 +15,7 @@ export async function SipgateAnswer(req) {
     const debug = await storage.get("debug")
     const callAnsweredDate = dayjs().tz(issueConfiguration.timezone)
 
-    const jiraManager = new JIRAManager()
+    const jiraManager = new JiraManager()
     const replacementManager = new ReplacementManager()
     const debugManager = new DebugManager()
 

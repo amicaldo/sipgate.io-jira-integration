@@ -4,11 +4,8 @@ import ForgeUI, { useState, Fragment, Form, Heading, SectionMessage, Strong, Tab
 export default function WebhookGenerator() {
     const [webTriggerURL, setWebTriggerURL] = useState("")
     const generateURL = async formData => {
-        var createIssuePostURL = await webTrigger.getUrl("sipgateCall")
-
-
-        var onSipgateReturnURL = await webTrigger.getUrl("onSipgateReturn")
-        onSipgateReturnURL += `?project=${formData.projectID}&phoneField=${formData.cField1}&issueID=${formData.issueID}&closeID=${formData.closeID}&onSipgateReturn=${encodeURIComponent(onSipgateReturnURL)}&createIssuePostURL=${encodeURIComponent(createIssuePostURL)}&webhookEvent=onIncommingCall`
+        var onSipgateReturnURL = await webTrigger.getUrl("sipgateReturn")
+        onSipgateReturnURL += `?project=${formData.projectID}&phoneField=${formData.cField1}&issueID=${formData.issueID}&closeID=${formData.closeID}&webhookEvent=onIncommingCall`
 
         setWebTriggerURL(onSipgateReturnURL)
     }

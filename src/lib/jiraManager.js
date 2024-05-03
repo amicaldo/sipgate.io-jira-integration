@@ -1,8 +1,8 @@
 import api, { route, storage } from "@forge/api";
-import ReplacementManager from "./ReplacementManager"
+import ReplacementManager from "./replacementManager"
 
 
-export default class JIRAManager {
+export default class JiraManager {
     _jql
     _jqlQueryCache = {}
 

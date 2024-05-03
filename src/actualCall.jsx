@@ -1,51 +1,10 @@
-import dayjs from "dayjs"
-import utc from "dayjs/plugin/utc"
-import timezone from "dayjs/plugin/timezone"
+import { fetch, storage } from '@forge/api';
+import dayjs from 'dayjs';
+import JiraManager from './lib/jiraManager';
+import ReplacementManager from './lib/replacementManager';
+import DebugManager from './lib/debugManager';
+import getBodyData from './lib/getBodyData';
 import { parsePhoneNumber } from 'libphonenumber-js';
-import { fetch, storage, webTrigger } from "@forge/api"
-import getBodyData from "./lib/getBodyData"
-import JIRAManager from "./lib/JIRAManager"
-import ReplacementManager from "./lib/ReplacementManager"
-import DebugManager from "./lib/debugManager"
-
-dayjs.extend(utc)
-dayjs.extend(timezone)
-
-export async function handleIncommingCall(req) {
-    const queryParameters = req.queryParameters
-    const body = getBodyData(req.body)
-
-    console.log("NEUER eingehender call; handleIncommingCall", body);
-    console.log("Send request to", decodeURIComponent(queryParameters.createIssuePostURL[0])+ `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}`);
-
-    fetch(decodeURIComponent(queryParameters.createIssuePostURL[0])+ `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}`, {
-        method: 'POST',
-        headers: { "Content-Type": ["application/json"] },
-        body: JSON.stringify(body)
-    }).then()
-
-    const answerURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onAnswer`
-    const hangupURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
-
-    console.log("fetch send let return a response",xml({
-        Response: [
-            { _attr: { onAnswer: answerURL } },
-            { _attr: { onHangup: hangupURL } }
-        ]
-    }));
-
-    return {
-        headers: { "Content-Type": ["application/xml"] },
-        body: xml({
-            Response: [
-                { _attr: { onAnswer: answerURL } },
-                { _attr: { onHangup: hangupURL } }
-            ]
-        }),
-        statusCode: 200,
-        statusText: "OK"
-    }
-}
 
 export async function SipgateCall(req) {
     const [issueConfiguration, debug] =
@@ -57,7 +16,7 @@ export async function SipgateCall(req) {
 
     const callStartedDate = dayjs().tz(issueConfiguration.timezone)
 
-    const jiraManager = new JIRAManager()
+    const jiraManager = new JiraManager()
     const replacementManager = new ReplacementManager()
     const debugManager = new DebugManager()
 
@@ -70,8 +29,8 @@ export async function SipgateCall(req) {
         const body = getBodyData(req.body)
 
         try {
-            if (!body.from.startsWith('+')){
-                body.from = "+"+body.from;
+            if (!body.from.startsWith('+')) {
+                body.from = "+" + body.from;
             }
             console.log("try to parse", body.from);
             const formattedPhoneNumber = parsePhoneNumber(body.from);
@@ -80,8 +39,8 @@ export async function SipgateCall(req) {
                 body.from = formattedPhoneNumber.formatInternational();
                 console.log("parsed phone number successful", body.from);
             }
-        } catch(e){
-            console.log("parse of phone number not successful",body.from, e);
+        } catch (e) {
+            console.log("parse of phone number not successful", body.from, e);
         }
 
 
@@ -198,11 +157,9 @@ export async function SipgateCall(req) {
                         statusCode: 200,
                         statusText: "OK"
                     });
-                }
-                catch (e) {
+                } catch (e) {
                     console.log("error on response generation", e);
                 }
-
 
 
                 return {
