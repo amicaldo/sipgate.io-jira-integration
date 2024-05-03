@@ -39,7 +39,7 @@ export default function IssueConfiguration() {
                     {"This tab allows you to configure the issue design.\nHere you can configure the tool output and settings."}
                 </Text>
                 <Text>
-                {"This is Version 1.1.3 of the App."}
+                {"This is Version 2.0.0 of the App."}
                 </Text>
             </SectionMessage>
             <SectionMessage title="Warning" appearance="warning">

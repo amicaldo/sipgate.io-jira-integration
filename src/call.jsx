@@ -15,6 +15,9 @@ export async function handleIncommingCall(req) {
     const queryParameters = req.queryParameters
     const body = getBodyData(req.body)
 
+    console.log("NEUER eingehender call; handleIncommingCall", body);
+    console.log("Send request to", decodeURIComponent(queryParameters.createIssuePostURL[0])+ `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}`);
+
     fetch(decodeURIComponent(queryParameters.createIssuePostURL[0])+ `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}`, {
         method: 'POST',
         headers: { "Content-Type": ["application/json"] },
@@ -23,6 +26,13 @@ export async function handleIncommingCall(req) {
 
     const answerURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onAnswer`
     const hangupURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
+
+    console.log("fetch send let return a response",xml({
+        Response: [
+            { _attr: { onAnswer: answerURL } },
+            { _attr: { onHangup: hangupURL } }
+        ]
+    }));
 
     return {
         headers: { "Content-Type": ["application/xml"] },
@@ -38,8 +48,6 @@ export async function handleIncommingCall(req) {
 }
 
 export async function SipgateCall(req) {
-    console.log("NEUER eingehender call");
-
     const [issueConfiguration, debug] =
         await Promise.all(
             [
