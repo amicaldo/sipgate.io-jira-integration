@@ -7,6 +7,7 @@ import getBodyData from './lib/getBodyData';
 import { parsePhoneNumber } from 'libphonenumber-js';
 
 export async function SipgateCall(req) {
+    console.log("Request on SipgateCall")
     const [issueConfiguration, debug] =
         await Promise.all(
             [
@@ -26,7 +27,8 @@ export async function SipgateCall(req) {
     ])
 
     try {
-        const body = getBodyData(req.body)
+        const body = JSON.parse(req.body)
+        console.log("body", body, req.body);
 
         try {
             if (!body.from.startsWith('+')) {
@@ -70,9 +72,6 @@ export async function SipgateCall(req) {
                         console.log("Tellow API not accessible", e);
                     }
                 }
-
-                const answerURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onAnswer`
-                const hangupURL = `${decodeURIComponent(queryParameters.onSipgateReturn[0])}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
 
                 const callInfoFromStorage = await storage.get(body.xcid)
 
@@ -146,27 +145,8 @@ export async function SipgateCall(req) {
                     }
                 }
 
-                try {
-                    console.log("answerURL", answerURL);
-                    console.log("hangupURL", hangupURL);
-                    console.log("queryParametersCloseID", queryParameters.closeID[0]);
-
-                    console.log({
-                        headers: { "Content-Type": ["application/xml"] },
-                        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
-                        statusCode: 200,
-                        statusText: "OK"
-                    });
-                } catch (e) {
-                    console.log("error on response generation", e);
-                }
-
-
                 return {
-                    headers: { "Content-Type": ["application/xml"] },
-                    body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
-                    statusCode: 200,
-                    statusText: "OK"
+                    statusCode: 200
                 }
             }
         }
@@ -174,7 +154,7 @@ export async function SipgateCall(req) {
         if (debug.debugOption) {
             debug.debugLog.push(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
 
-            console.error(`${timeField}: SipcateCall Func -> Error: ${JSON.stringify(err, null, 4)}`)
+            console.error(`${timeField}: SipcateCall Func -> Error:`, err)
 
             await storage.set("debug", debug)
         }

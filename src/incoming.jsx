@@ -19,7 +19,7 @@ export async function SipgateCallIncomming(req) {
     console.log("Send request to", newOldUrl + `?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}&webhookEvent=onHookCall`);
 
     // TODO remove await
-    await api.fetch(`${newOldUrl}?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}&webhookEvent=onHookCall`, {
+    api.fetch(`${newOldUrl}?project=${queryParameters.project[0]}&phoneField=${queryParameters.phoneField[0]}&issueID=${queryParameters.issueID[0]}&closeID=${queryParameters.closeID[0]}&webhookEvent=onHookCall`, {
         method: 'POST',
         headers: { "Content-Type": ["application/json"] },
         body: JSON.stringify(body)
@@ -27,7 +27,7 @@ export async function SipgateCallIncomming(req) {
     .catch(console.error)
 
     const answerURL = `${newOldUrl}?webhookEvent=onAnswer`
-    const hangupURL = `${newOldUrl}?webhookEvent=onHangup&closeID=${queryParameters.closeID[0]}`
+    const hangupURL = `${newOldUrl}?webhookEvent=onHangup&amp;closeID=${queryParameters.closeID[0]}`
 
     console.log("fetch send let return a response", {
         body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
@@ -35,7 +35,7 @@ export async function SipgateCallIncomming(req) {
 
     return {
         headers: { "Content-Type": ["application/xml"] },
-        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${answerURL}" onHangup="${hangupURL}" />`,
+        body: `<?xml version="1.0" encoding="UTF-8"?><Response onAnswer="${encodeURI(answerURL)}" onHangup="${encodeURI(hangupURL)}" />`,
         statusCode: 200,
         statusText: "OK"
     }
