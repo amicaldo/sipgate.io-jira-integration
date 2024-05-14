@@ -81,7 +81,7 @@ export default function JQLConfiguration() {
         <Tab label="JQL Configuration">
             <SectionMessage>
                 <Text>
-                    {"Text"}
+                    {"Through a JQL query, you can search for tickets in JIRA and use the summary of the first match as a variable. One use case is, for example, searching for the sender's phone number and finding their name or the latest support ticket via JQL + linking it. The variable can then be reused in the call ticket in the description or the title."}
                 </Text>
             </SectionMessage>
             <Form onSubmit={submitForm}>
@@ -105,10 +105,12 @@ export default function JQLConfiguration() {
                             <TextField
                                 name={`query_${index}`}
                                 label={`JQL Query ${`${index + 1}`.padStart(2, "0")}`}
+                                placeholder="(project = KD OR project = CPY) AND (Phonenumber  ~ "{{$number}}" OR Mobile ~ "{{$number}}")"
                                 defaultValue={query} />
                             <TextField
                                 name={`variable_${index}`}
                                 label={`JQL Variable ${`${index + 1}`.padStart(2, "0")}`}
+                                placeholder="{{$callerName}}"
                                 defaultValue={variable}
                             />
                             <Select

@@ -35,9 +35,9 @@ export default function CallLogConfiguration() {
     return (
         <Tab label="Call Log Configuration">
             <SectionMessage title="About">
-                <Text>This Tab allows you to configure the call log.</Text>
+                <Text>This tab enables you to configure the call log that gets written into the issue description..</Text>
                 <Text>
-                    The call log, logs every action done in a call stack.
+                    The call log records every action performed in a call stack.
                 </Text>
                 <Text>
                     For example:
@@ -95,6 +95,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Incomming Call"
                     name="incommingCall"
+                    placeholder="{{$timeField}}: Incomming call on - {{$sipgateNumber}}"
                     isRequired
                     description="This field specifies the incomming call log entry."
                     defaultValue={callLogConfiguration.incommingCall}
@@ -102,6 +103,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Redirected Call"
                     name="redirectedCall"
+                    placeholder="{{$timeField}}: Call redirected to {{$sipgateUsername}}"
                     isRequired
                     description="This field specifies the redirected call log entry."
                     defaultValue={callLogConfiguration.redirectedCall}
@@ -109,6 +111,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call answered"
                     name="answerCall"
+                    placeholder="{{$timeField}}: Call answered by {{$sipgateUsername}}"
                     isRequired
                     description="This field specifies the answer call log entry."
                     defaultValue={callLogConfiguration.answerCall}
@@ -116,6 +119,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call ended"
                     name="normalClearing"
+                    placeholder="{{$timeField}}: Call hangup."
                     isRequired
                     description="This field specifies the call ended log entry."
                     defaultValue={callLogConfiguration.normalClearing}
@@ -123,6 +127,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call occupied"
                     name="busy"
+                    placeholder="{{$timeField}}: The call was terminated because the called party was busy."
                     isRequired
                     description="This field specifies the occupied log entry."
                     defaultValue={callLogConfiguration.busy}
@@ -130,6 +135,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call hung up"
                     name="cancel"
+                    placeholder="{{$timeField}}: The call ended before anyone could pick up."
                     isRequired
                     description="This field specifies the hung up log entry."
                     defaultValue={callLogConfiguration.cancel}
@@ -137,6 +143,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call rejected"
                     name="noAnswer"
+                    placeholder="{{$timeField}}: The call ended because the called party declined it."
                     isRequired
                     description="This field specifies the rejected call log entry."
                     defaultValue={callLogConfiguration.noAnswer}
@@ -144,6 +151,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Could not reach"
                     name="congestion"
+                    placeholder="{{$timeField}}: The call ended because the called party was unreachable."
                     isRequired
                     description="This field specifies the could not reach call log entry."
                     defaultValue={callLogConfiguration.congestion}
@@ -151,6 +159,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Could not found"
                     name="notFound"
+                    placeholder="{{$timeField}}: The call ended because either the called phone number does not exist or the person is not online."
                     isRequired
                     description="This field specifies the could not be found call log entry."
                     defaultValue={callLogConfiguration.notFound}
@@ -158,6 +167,7 @@ export default function CallLogConfiguration() {
                 <TextArea
                     label="Call duration"
                     name="callDuration"
+                    placeholder="Call duration: {{$minutes}}:{{$seconds}} minutes."
                     isRequired
                     description="This field specifies the call duration log entry."
                     defaultValue={callLogConfiguration.callDuration}

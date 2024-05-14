@@ -39,7 +39,7 @@ export default function IssueConfiguration() {
                     {"This tab allows you to configure the issue design.\nHere you can configure the tool output and settings."}
                 </Text>
                 <Text>
-                {"This is Version 2.0.0 of the App."}
+                {"This is Version 4.10.0 of the App."}
                 </Text>
             </SectionMessage>
             <SectionMessage title="Warning" appearance="warning">
@@ -82,7 +82,10 @@ export default function IssueConfiguration() {
                     name="sipgateNumber"
                     isRequired
                     type="text"
-                    description={`Your sipgater number without the last digit.\nExample: "492111234567" where the last digit "7" is representing the sipgate line, that was called.`}
+                    description={`Your sipgater number without the last digit.\n\n
+                    Your phone number: +49 2111 234567 - 0\n
+                    Please input: 492111234567
+                    `}
                     defaultValue={issueConfiguration.sipgateNumber}
                 />
                 <Heading size="large">
@@ -118,6 +121,7 @@ export default function IssueConfiguration() {
                 <TextArea
                     label="{{$spamRatingField}}"
                     name="spamRatingField"
+                    placeholder={`(Rate: {{$rating}})`}
                     isRequired
                     description={`This field specifies the spam rating for the number.`}
                     defaultValue={issueConfiguration.spamRatingField}
@@ -125,6 +129,7 @@ export default function IssueConfiguration() {
                 <TextArea
                     label="{{$cityField}}"
                     name="cityField"
+                    placeholder={`from {{$city}}`}
                     isRequired
                     description={`This field specifies the caller's city for the ticket.`}
                     defaultValue={issueConfiguration.cityField}
@@ -132,6 +137,7 @@ export default function IssueConfiguration() {
                 <TextArea
                     label="{{$timeField}}"
                     name="timeField"
+                    placeholder={`{{$time}} CET`}
                     isRequired
                     description={`This field specifies what ending will come after the time.`}
                     defaultValue={issueConfiguration.timeField}
@@ -142,6 +148,7 @@ export default function IssueConfiguration() {
                 <TextArea
                     label="Summary"
                     name="summary"
+                    placeholder={`Call from {{$callerName}} {{$number}} {{$spamRatingField}} on -{{$sipgateNumber}} {{$cityField}} - {{$date}} - {{$timeField}}`}
                     isRequired
                     description={`The issue summary.`}
                     defaultValue={issueConfiguration.summary}
