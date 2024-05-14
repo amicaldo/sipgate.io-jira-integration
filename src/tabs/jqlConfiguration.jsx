@@ -105,7 +105,7 @@ export default function JQLConfiguration() {
                             <TextField
                                 name={`query_${index}`}
                                 label={`JQL Query ${`${index + 1}`.padStart(2, "0")}`}
-                                placeholder="(project = KD OR project = CPY) AND (Phonenumber  ~ "{{$number}}" OR Mobile ~ "{{$number}}")"
+                                placeholder='(project = KD OR project = CPY) AND (Phonenumber  ~ "{{$number}}" OR Mobile ~ "{{$number}}")'
                                 defaultValue={query} />
                             <TextField
                                 name={`variable_${index}`}
