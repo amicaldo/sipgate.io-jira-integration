@@ -1,0 +1,41 @@
+modules:
+  jira:adminPage:
+    - key: sipgate-jira
+      function: main
+      title: Sipgate Integration for Jira
+  function:
+    - key: main
+      handler: index.run
+#    - key: sipgateCallFunc
+#      handler: call.SipgateCall
+#    - key: sipgateAnswerFunc
+#      handler: answer.SipgateAnswer
+#    - key: sipgateHangupFunc
+#      handler: hangup.SipgateHangup
+    - key: sipgateReturnFunc
+      handler: sipgateReturn.onSipgateReturn
+  webtrigger:
+#    - key: sipgateCall
+#      function: sipgateCallFunc
+#    - key: sipgateAnswer
+#      function: sipgateAnswerFunc
+#    - key: sipgateHangup
+#      function: sipgateHangupFunc
+    - key: sipgateReturn
+      function: sipgateReturnFunc
+app:
+  id: <XXXXXX> # Get it from https://developer.atlassian.com/console/myapps/
+  runtime:
+    name: nodejs18.x
+permissions:
+  scopes:
+    - read:me
+    - storage:app
+    - read:jira-user
+    - read:jira-work
+    - write:jira-work
+  external:
+    fetch:
+      backend:
+        - www.tellows.de
+        - '*.atlassian-dev.net'
